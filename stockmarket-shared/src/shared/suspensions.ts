@@ -7,6 +7,7 @@ export function pendingSuspensions<T extends { _id: string; playerId: string;
     const order = players.map((_, index) => players[(period + index) % players.length]._id);
 
     return insights.filter((card) => card.chanceKind === "hold" && !card.used && !card.resolved
+      && order.includes(card.playerId)
       && (card.period === undefined || card.period === period))
         .toSorted((a, b) => order.indexOf(a.playerId) - order.indexOf(b.playerId) || a._id.localeCompare(b._id));
 }
