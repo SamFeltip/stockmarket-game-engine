@@ -58,3 +58,27 @@ The headless tests require no dependency installation, credentials, environment 
 running Convex service. Its dev dependencies are needed only for TypeScript checking.
 The web integration tests replay the same seeded full game through Convex endpoints and the
 in-memory adapter and compare financial state, roles, prices and card use after every decision.
+
+## Deployment and TV packaging verification
+
+The web app's existing local deployment commands run from `stockmarket-convex` in this full
+workspace. They bundle the shared source into the backend and frontend outputs; shared TypeScript
+files are not needed by the deployed browser or TV at runtime.
+
+Convex can validate its production deployment without applying it:
+
+```sh
+cd stockmarket-convex
+npx convex deploy --dry-run --yes --typecheck enable --cmd 'npm run build' --cmd-url-env-var-name VITE_CONVEX_URL
+VITE_CONVEX_URL=https://effervescent-flamingo-244.convex.cloud npm run build
+```
+
+The second command is intentional: Convex's dry-run skips execution of its `--cmd` build hook.
+Deployment requires the existing Convex credentials; Pages direct upload still consumes the
+self-contained `dist` directory. Git-connected builds must check out this parent workspace and
+its submodules, rather than cloning the web submodule alone.
+
+The TV repository's `Verify TV Android build` workflow runs its tests, web bundle, debug APK build
+and Android lint on a standard public Ubuntu runner. It opens the resulting APK and checks every
+built web asset byte-for-byte against `dist`. No app signing secrets, store submission, device
+installation, artifact storage or production deployment are involved.
