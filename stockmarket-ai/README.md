@@ -4,6 +4,8 @@ A separate TypeScript codebase using `../stockmarket-shared`. There is no GUI, t
 application, optimiser, model framework, or dependency on the web app or Convex. All game actions,
 dealing and settlement call the shared engine used by the live game.
 
+See the root [setup guide](../SETUP.md) for workspace installation and checks.
+
 ## API
 
 ```ts

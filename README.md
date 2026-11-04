@@ -1,86 +1,23 @@
 # Stockmarket workspace
 
-The current web game and the headless AI environment use one implementation of the game rules.
+The web game and headless AI environment use one implementation of the game rules. Start with [SETUP.md](SETUP.md) to clone, install and run the projects, and [DEPLOYMENT.md](DEPLOYMENT.md) to release the backend, frontend and TV builds.
 
 ```text
 stockmarket/
-├── stockmarket-shared/   Shared rules, game lifecycle, contracts, catalog and existing NPC strategies
-├── stockmarket-ai/       In-memory environment API and tests; no UI or learning algorithm
-├── stockmarket-convex/   Existing React game and Convex persistence/auth/scheduling adapter
-├── stockmarket-tv/       Existing TV application
-└── stockmarket-old/      Original Go/templ/HTMX project (its existing Git repository is retained)
+├── stockmarket-shared/   Rules, game lifecycle, contracts, catalog and existing NPC strategies
+├── stockmarket-ai/       In-memory environment API and tests
+├── stockmarket-convex/   React game and Convex persistence/auth/scheduling adapter (submodule)
+├── stockmarket-tv/       Android TV / Fire TV application (submodule)
+└── stockmarket-old/      Original Go/templ/HTMX application (submodule)
 ```
 
-This repository is [SamFeltip/stockmarket-game-engine](https://github.com/SamFeltip/stockmarket-game-engine).
-The [stockmarket GitHub Project](https://github.com/users/SamFeltip/projects/3) groups the four repositories.
-It tracks `stockmarket-shared` and `stockmarket-ai` directly. The web game, TV app and original
-Go/HTMX project are Git submodules pinned to compatible commits, retaining their own repositories
-and histories. Additional local development worktrees remain ignored.
+This public repository is [stockmarket-game-engine](https://github.com/SamFeltip/stockmarket-game-engine). It owns the shared engine and headless environment directly; the three apps retain their Git histories as submodules pinned to compatible commits. The [stockmarket GitHub Project](https://github.com/users/SamFeltip/projects/3) groups the four repositories. Keep the sibling layout: the web app imports shared TypeScript source directly.
 
-Clone the complete public workspace (no GitHub authentication is required):
+The extraction preserves the existing game rules, including £500 cash rounding and the £8 NatWest opening price. Persistence, authentication, subscriptions and live scheduling remain in the Convex app. The headless environment uses an in-memory adapter and needs no Convex service. No training GUI, terminal trainer or learning algorithm is included.
 
-```sh
-git clone --recurse-submodules https://github.com/SamFeltip/stockmarket-game-engine.git stockmarket
-cd stockmarket
-```
-
-For an existing clone, run `git submodule update --init --recursive` after pulling. The submodules
-initially use detached checkouts of the recorded commits; create a branch inside a submodule before
-editing it. To update a dependency, publish its commit in its own repository, then commit its updated
-submodule pointer here. Do not use `git submodule update --remote` to reproduce a pinned checkout.
-
-Keep the sibling layout: consumers import shared TypeScript source directly. A checkout of the web
-repository on its own is no longer sufficient. Compatible commits from the web app's `main`
-and TV app's `master` branches are pinned here.
-
-The extraction uses the web working tree's existing rules as its baseline, including the already
-present £500 cash rounding and £8 NatWest opening price. It introduces no rules migration.
-Live database schema, endpoint arguments, authentication, animations and scheduling stay with the app.
-
-See [shared engine](stockmarket-shared/README.md) and [headless API](stockmarket-ai/README.md).
-No graphical or terminal training application is included.
-
-## Checks
-
-Node 22.18 or newer:
-
-```sh
-npm ci --prefix stockmarket-shared
-npm run check --prefix stockmarket-shared
-npm ci --prefix stockmarket-ai
-npm run check --prefix stockmarket-ai
-npm test --prefix stockmarket-ai
-npm ci --prefix stockmarket-convex
-npm run check --prefix stockmarket-convex
-```
-
-The headless tests require no dependency installation, credentials, environment variables or
-running Convex service. Its dev dependencies are needed only for TypeScript checking.
-The web integration tests replay the same seeded full game through Convex endpoints and the
-in-memory adapter and compare financial state, roles, prices and card use after every decision.
-
-## Deployment and TV packaging verification
-
-The web app's existing local deployment commands run from `stockmarket-convex` in this full
-workspace. They bundle the shared source into the backend and frontend outputs; shared TypeScript
-files are not needed by the deployed browser or TV at runtime.
-
-Convex can validate its production deployment without applying it:
-
-```sh
-cd stockmarket-convex
-npx convex deploy --dry-run --yes --typecheck enable --cmd 'npm run build' --cmd-url-env-var-name VITE_CONVEX_URL
-VITE_CONVEX_URL=https://effervescent-flamingo-244.convex.cloud npm run build
-```
-
-The second command is intentional: Convex's dry-run skips execution of its `--cmd` build hook.
-Deployment requires the existing Convex credentials; Pages direct upload still consumes the
-self-contained `dist` directory. Git-connected builds must check out this parent workspace and
-its submodules, rather than cloning the web submodule alone.
-
-The TV repository's `Verify TV Android build` workflow runs its tests, web bundle, debug APK build
-and Android lint on a standard public Ubuntu runner. It opens the resulting APK and checks every
-built web asset byte-for-byte against `dist`. No app signing secrets, store submission, device
-installation, artifact storage or production deployment are involved.
-
-See [release verification](RELEASE_VERIFICATION.md) for the main/master deployment and prepared TV build.
+- [Shared engine architecture](stockmarket-shared/README.md) and [rules comparison](stockmarket-shared/docs/RULES_COMPARISON.md)
+- [Headless API](stockmarket-ai/README.md)
+- [Web application](https://github.com/SamFeltip/stockmarket.js/blob/main/README.md)
+- [TV application and device guides](https://github.com/SamFeltip/stockmarket-tv/blob/master/README.md)
+- [Last release verification](RELEASE_VERIFICATION.md)
+- [Documentation ownership and historical records](docs/README.md)

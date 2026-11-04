@@ -27,5 +27,6 @@ The NPC observation builder and automatic NPC choice adapters are shared too. Th
 policy itself remains outside the game engine.
 
 `npm ci && npm run check` checks the shared package independently. Imports use the sibling source
-layout so every consumer runs the same code. Keep this repository revision coordinated with the
-web feature branch when deploying; no live deployment is performed by these checks.
+layout so every consumer runs the same code. Keep this repository revision coordinated with
+the pinned web app when deploying; no live deployment is performed by these checks. See the root [setup guide](../SETUP.md),
+[deployment guide](../DEPLOYMENT.md) and [rules comparison](docs/RULES_COMPARISON.md).
