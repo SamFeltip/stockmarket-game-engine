@@ -1,8 +1,8 @@
-import { sharesPerCompany } from "./rules";
+import { floorTradeQuantity, sharesPerCompany, validTradeQuantity } from "./rules";
 /** Retail Rights Issue: one new share per two held, at £1 each. */
 export const rightsIssuePrice = 1;
 
-export const rightsEntitlement = (held: number) => Math.floor(Math.max(0, held) / 2);
+export const rightsEntitlement = (held: number) => floorTradeQuantity(held / 2);
 
 export interface RightsIssue {
     insightId: string;
@@ -32,6 +32,11 @@ export function rightsPurchaseError(quantity: number, maximum: number, cash: num
     if (quantity > maximum)
     {
         return "You may only buy one extra share for every two you owned when the Rights Issue started.";
+    }
+
+    if (quantity !== 0 && !validTradeQuantity(quantity))
+    {
+        return "Enter a positive number of shares in steps of 1,000.";
     }
 
     return quantity * rightsIssuePrice > cash ? "You don't have enough cash. Try fewer shares." : "";

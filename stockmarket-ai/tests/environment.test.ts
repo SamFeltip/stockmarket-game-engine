@@ -84,7 +84,7 @@ void test("loan and Rights Issue use the shared commands, pause trading and cons
     const seats = rows(fixture, "players");
     const player = seats.find((seat) => seat._id === game.currentPlayerId)!;
     const stockKey = game.prices[0].stockKey;
-    player.holdings.find((holding) => holding.stockKey === stockKey)!.quantity = 1000;
+    player.holdings.find((holding) => holding.stockKey === stockKey)!.quantity = 2000;
     const cards = rows(fixture, "playerInsights");
     const loan = cards.find((card) => card.playerId === player._id)!;
     Object.assign(loan, { stockKey: chanceStockKey, chanceKind: "loan", used: false, resolved: false });
@@ -97,9 +97,9 @@ void test("loan and Rights Issue use the shared commands, pause trading and cons
     assert.equal(offer.phase, "rights");
     const unchangedTurn = rows(env.snapshot(), "games")[0].turn;
     assert.equal(unchangedTurn, 0);
-    await env.step({ kind: "rights-response", quantity: 500 }, offer.token);
+    await env.step({ kind: "rights-response", quantity: 1000 }, offer.token);
     assert.equal(rows(env.snapshot(), "games")[0].turn, 1);
-    assert.equal(rows(env.snapshot(), "players").find((seat) => seat._id === player._id)!.cash, 59_500);
+    assert.equal(rows(env.snapshot(), "players").find((seat) => seat._id === player._id)!.cash, 59_000);
     // Bring the first player back to its next normal turn.
     for (let index = 1; index < seats.length; index++) {
         const turn = (await env.current()).decision!;
@@ -107,7 +107,7 @@ void test("loan and Rights Issue use the shared commands, pause trading and cons
     }
     const turn = (await env.current()).decision!;
     await env.step({ kind: "government-loan", insightId: loan._id }, turn.token);
-    assert.equal(rows(env.snapshot(), "players").find((seat) => seat._id === player._id)!.cash, 69_500);
+    assert.equal(rows(env.snapshot(), "players").find((seat) => seat._id === player._id)!.cash, 69_000);
 });
 
 void test("observations expose own cards but not the full hidden state", async () => {
