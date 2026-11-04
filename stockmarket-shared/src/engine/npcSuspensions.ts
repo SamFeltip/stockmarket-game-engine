@@ -3,10 +3,10 @@ import { members, roundInsights } from "./library";
 import { pendingSuspensions } from "../shared/suspensions";
 import { withRoleBonuses } from "../shared/company-roles";
 import { roundPrices } from "../shared/settlement";
-import { suspensionChoice } from "../packages/npc-engine/src/chance";
+import { chooseNpcAction } from "../packages/npc-engine/src/runtime";
 import { spendSuspension } from "./suspensions";
 
-/** NPCs protect the largest loss in their portfolio, otherwise discard their card. */
+/** Resolve automatic decisions through the portable policy boundary. */
 export async function resolveNpcSuspensions(context: MutationContext, game: Document_<"games">)
 {
     const players = await members(context, game._id);
@@ -25,7 +25,8 @@ export async function resolveNpcSuspensions(context: MutationContext, game: Docu
         const visible = game.prices.filter((price) =>
             stocks.some((stock) => stock.display && stock.key === price.stockKey));
 
-        game = await spendSuspension(context, game, card,
-            suspensionChoice(owner.holdings, visible, prices, game.suspended));
+        const { action } = chooseNpcAction({ phase: "suspension", holdings: owner.holdings,
+            opening: visible, settled: prices, suspended: game.suspended });
+        game = await spendSuspension(context, game, card, action.stockKey);
     }
 }

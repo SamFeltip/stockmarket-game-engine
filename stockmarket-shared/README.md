@@ -26,6 +26,20 @@ imports. Rule changes belong here; do not add a separate implementation in eithe
 The NPC observation builder and automatic NPC choice adapters are shared too. The training
 policy itself remains outside the game engine.
 
+Live hosts use `src/npc.ts` as the NPC boundary. It builds turn inputs, chooses actions, checks
+policy compatibility and proposals, and owns default profiles, serialized policy state and
+fallback decisions. `src/npc-catalog.ts` exposes identity and difficulty metadata for UI and
+schema adapters. Hosts persist the returned state envelope without parsing its memory or
+assuming its version. Existing stored games and NPC memories keep their original formats.
+
+Trading, rights purchases and suspension choices use the portable policy runtime in
+`src/packages/npc-engine/src/runtime.ts`; the headless baseline uses that same runtime.
+Strategy modules depend only on portable contracts and shared rules, never Convex or a host.
+The web app owns scheduling delays, job deduplication/recovery, persistence and command
+execution. Retry timing and transaction boundaries remain host responsibilities. Web runtime
+code must not import NPC implementation modules; compatibility forwarding modules remain
+available for strategy tests and offline analysis tools.
+
 `npm ci && npm run check` checks the shared package independently. Imports use the sibling source
 layout so every consumer runs the same code. Keep this repository revision coordinated with
 the pinned web app when deploying; no live deployment is performed by these checks. See the root [setup guide](../SETUP.md),

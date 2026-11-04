@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/require-await -- Memory operations preserve the async store contract and reject errors as promises without I/O. */
 import type { Document_, GameStore, Id, IndexRange, Selection, Table, Tables } from "../../stockmarket-shared/src/engine/model";
 
 // These are storage ordering definitions, not gameplay rules.

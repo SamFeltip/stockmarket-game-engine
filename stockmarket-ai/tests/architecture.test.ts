@@ -9,7 +9,7 @@ function files(directory: string): string[] {
         entry.isDirectory() ? files(join(directory, entry.name)) : [join(directory, entry.name)]);
 }
 
-test("the shared engine and headless runtime never import the live app, Convex, or React", () => {
+void test("the shared engine and headless runtime never import the live app, Convex, or React", () => {
     const roots = [new URL("../../stockmarket-shared/src/", import.meta.url), new URL("../src/", import.meta.url)];
     for (const file of roots.flatMap((root) => files(fileURLToPath(root)))) {
         if (!file.endsWith(".ts")) { continue; }

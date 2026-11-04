@@ -12,7 +12,7 @@ function rows<T extends "games" | "players" | "playerInsights">(snapshot: Enviro
 }
 
 for (const players of [4, 6]) {
-    test(`plays complete ${players}-seat games with the shared NPCs and full retail rules`, async () => {
+    void test(`plays complete ${players}-seat games with the shared NPCs and full retail rules`, async () => {
         const env = await GameEnvironment.create({ seed: 718, players, periods: players === 4 ? 6 : 10 });
         const memories = new Map<string, NpcMemory>();
         let result = await env.current();
@@ -45,7 +45,7 @@ for (const players of [4, 6]) {
     });
 }
 
-test("seeded reset and checkpoint branching replay exactly", async () => {
+void test("seeded reset and checkpoint branching replay exactly", async () => {
     const first = await GameEnvironment.create({ seed: 42 });
     const second = await GameEnvironment.create({ seed: 42 });
     assert.deepEqual(first.snapshot(), second.snapshot());
@@ -63,7 +63,7 @@ test("seeded reset and checkpoint branching replay exactly", async () => {
     assert.notDeepEqual(second.snapshot(), different.snapshot());
 });
 
-test("rejected and stale actions leave all state and randomness unchanged", async () => {
+void test("rejected and stale actions leave all state and randomness unchanged", async () => {
     const env = await GameEnvironment.create({ seed: 1 });
     const decision = (await env.current()).decision!;
     const before = env.snapshot();
@@ -77,7 +77,7 @@ test("rejected and stale actions leave all state and randomness unchanged", asyn
     assert.deepEqual(env.snapshot(), advanced);
 });
 
-test("loan and Rights Issue use the shared commands, pause trading and consume exactly one turn", async () => {
+void test("loan and Rights Issue use the shared commands, pause trading and consume exactly one turn", async () => {
     const original = await GameEnvironment.create({ seed: 7 });
     const fixture = original.snapshot();
     const game = rows(fixture, "games")[0];
@@ -110,7 +110,7 @@ test("loan and Rights Issue use the shared commands, pause trading and consume e
     assert.equal(rows(env.snapshot(), "players").find((seat) => seat._id === player._id)!.cash, 69_500);
 });
 
-test("observations expose own cards but not the full hidden state", async () => {
+void test("observations expose own cards but not the full hidden state", async () => {
     const env = await GameEnvironment.create({ seed: 33 });
     const { decision } = await env.current();
     assert.equal(decision!.observation.ownInsights.length, 10);
@@ -121,7 +121,7 @@ test("observations expose own cards but not the full hidden state", async () => 
     assert.deepEqual(decision!.observation.ownInsights.map((card) => card.id), ids);
 });
 
-test("invalid configurations fail before a game starts", async () => {
+void test("invalid configurations fail before a game starts", async () => {
     for (const config of [{ seed: 1, players: 3 }, { seed: 1, periods: 2 }, { seed: NaN }]) {
         await assert.rejects(GameEnvironment.create(config));
     }
