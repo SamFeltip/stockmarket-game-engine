@@ -2,11 +2,8 @@
 # Local experiments and review screenshots
 experiments/
 
-# Existing projects retain their own repositories and worktrees.
-stockmarket-old/
-stockmarket-convex/
+# Additional local worktrees are not part of the reproducible checkout.
 stockmarket-convex-cash-dock/
-stockmarket-tv/
 stockmarket-tv-share-suspended/
 **/node_modules/
 **/dist/

@@ -11,12 +11,27 @@ stockmarket/
 └── stockmarket-old/      Original Go/templ/HTMX project (its existing Git repository is retained)
 ```
 
-This parent repository tracks `stockmarket-shared` and `stockmarket-ai`. The web game and TV
-retain their existing Git repositories; their directories and other existing worktrees are ignored here.
-Keep the sibling layout: the consumers import shared TypeScript source directly, so there is no
-second compiled or copied rules implementation. A checkout of the web repository on its own is
-no longer sufficient. Other existing branches/worktrees retain their original implementation until
-these extraction changes are merged into them.
+This repository is [SamFeltip/stockmarket-game-engine](https://github.com/SamFeltip/stockmarket-game-engine).
+The [stockmarket GitHub Project](https://github.com/users/SamFeltip/projects/3) groups the four repositories.
+It tracks `stockmarket-shared` and `stockmarket-ai` directly. The web game, TV app and original
+Go/HTMX project are Git submodules pinned to compatible commits, retaining their own repositories
+and histories. Additional local development worktrees remain ignored.
+
+Clone the complete workspace (authentication is required for this private parent repository):
+
+```sh
+git clone --recurse-submodules https://github.com/SamFeltip/stockmarket-game-engine.git stockmarket
+cd stockmarket
+```
+
+For an existing clone, run `git submodule update --init --recursive` after pulling. The submodules
+initially use detached checkouts of the recorded commits; create a branch inside a submodule before
+editing it. To update a dependency, publish its commit in its own repository, then commit its updated
+submodule pointer here. Do not use `git submodule update --remote` to reproduce a pinned checkout.
+
+Keep the sibling layout: consumers import shared TypeScript source directly. A checkout of the web
+repository on its own is no longer sufficient. Feature-branch commits are pinned here; this does not
+merge the existing applications' main branches or deploy either app.
 
 The extraction uses the web working tree's existing rules as its baseline, including the already
 present £500 cash rounding and £8 NatWest opening price. It introduces no rules migration.

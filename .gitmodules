@@ -1,0 +1,9 @@
+[submodule "stockmarket-convex"]
+	path = stockmarket-convex
+	url = https://github.com/SamFeltip/stockmarket.js.git
+[submodule "stockmarket-tv"]
+	path = stockmarket-tv
+	url = https://github.com/SamFeltip/stockmarket-tv.git
+[submodule "stockmarket-old"]
+	path = stockmarket-old
+	url = https://github.com/SamFeltip/stockmarket.git
