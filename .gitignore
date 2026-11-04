@@ -3,7 +3,7 @@
 experiments/
 
 # Existing projects retain their own repositories and worktrees.
-stockmarket/
+stockmarket-old/
 stockmarket-convex/
 stockmarket-convex-cash-dock/
 stockmarket-tv/

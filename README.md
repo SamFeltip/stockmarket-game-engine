@@ -7,7 +7,8 @@ stockmarket/
 ├── stockmarket-shared/   Shared rules, game lifecycle, contracts, catalog and existing NPC strategies
 ├── stockmarket-ai/       In-memory environment API and tests; no UI or learning algorithm
 ├── stockmarket-convex/   Existing React game and Convex persistence/auth/scheduling adapter
-└── stockmarket-tv/       Existing TV application
+├── stockmarket-tv/       Existing TV application
+└── stockmarket-old/      Original Go/templ/HTMX project (its existing Git repository is retained)
 ```
 
 This parent repository tracks `stockmarket-shared` and `stockmarket-ai`. The web game and TV
