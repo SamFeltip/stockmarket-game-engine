@@ -30,3 +30,8 @@ policy itself remains outside the game engine.
 layout so every consumer runs the same code. Keep this repository revision coordinated with
 the pinned web app when deploying; no live deployment is performed by these checks. See the root [setup guide](../SETUP.md),
 [deployment guide](../DEPLOYMENT.md) and [rules comparison](docs/RULES_COMPARISON.md).
+
+## Environment configuration
+
+This package reads no environment variables and needs no `.env` file. Game configuration
+is supplied through the engine API. Consumers own their persistence and service configuration.

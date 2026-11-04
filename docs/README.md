@@ -1,6 +1,6 @@
 # Documentation ownership
 
-Workspace clone, installation and development instructions live in [SETUP.md](../SETUP.md); coordinated deployment instructions live in [DEPLOYMENT.md](../DEPLOYMENT.md). Project READMEs link there rather than maintaining separate setup procedures.
+Workspace clone, installation and development instructions live in [SETUP.md](../SETUP.md); coordinated deployment instructions live in [DEPLOYMENT.md](../DEPLOYMENT.md). Project READMEs link there rather than maintaining separate workspace setup procedures. Each app's `ENVIRONMENT.md` and `.env.example` own its environment configuration; the legacy template is under `backend/`.
 
 The [shared engine](../stockmarket-shared/README.md) owns rules and architecture, including the [board-game comparison](../stockmarket-shared/docs/RULES_COMPARISON.md), moved from the web app. The [AI package](../stockmarket-ai/README.md) owns the headless API. Web UI, authentication and database-backup reference notes stay in the web repository. TV remote/device setup, signing, store materials and TV-specific verification stay in the TV repository. Legacy Go documentation stays with the legacy app. Ignored private research and SQL exports remain local and are not published here.
 

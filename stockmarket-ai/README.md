@@ -72,3 +72,9 @@ npm run check
 Tests cover complete four- and six-seat games, special cards, seeded resets, checkpoint replay,
 stale/invalid-action rollback, hidden information, and dependency isolation. The live game's
 `tests/shared-engine.test.ts` provides Convex-versus-memory full-game parity coverage.
+
+## Environment configuration
+
+This package reads no environment variables and needs no `.env` file. Game configuration
+is supplied through `GameEnvironment.create` (including the RNG seed) or a snapshot.
+Do not copy the web or TV env files here; no Convex credentials or backend URL are needed.

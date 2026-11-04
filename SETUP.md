@@ -37,6 +37,15 @@ npm run check --prefix stockmarket-ai
 
 See the [shared engine](stockmarket-shared/README.md) and [headless API](stockmarket-ai/README.md). The environment reuses the live game's rules and existing NPC policies. No training GUI, terminal trainer or learning algorithm is included.
 
+## Environment ownership
+
+Each app loads its own configuration; there is no shared root `.env` file. See the web
+[environment guide](https://github.com/SamFeltip/stockmarket.js/blob/main/ENVIRONMENT.md),
+TV [environment guide](https://github.com/SamFeltip/stockmarket-tv/blob/master/ENVIRONMENT.md)
+and legacy [environment guide](https://github.com/SamFeltip/stockmarket/blob/main/ENVIRONMENT.md)
+for variable references and loading instructions. The shared engine and headless environment
+need no environment variables. Keep Convex server secrets on the selected deployment.
+
 ## Web development
 
 ```sh

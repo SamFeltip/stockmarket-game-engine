@@ -2,6 +2,8 @@
 
 Start with the complete pinned workspace and installed web dependencies from [SETUP.md](SETUP.md). The shared source is bundled into the Convex backend and frontend outputs; deployed browsers and TVs do not fetch engine source at runtime.
 
+Environment configuration is documented by the [web repository](https://github.com/SamFeltip/stockmarket.js/blob/main/ENVIRONMENT.md) and [TV repository](https://github.com/SamFeltip/stockmarket-tv/blob/master/ENVIRONMENT.md). There is no parent env file; CLI/CI variables are supplied to the relevant project's command.
+
 ## Production web and backend
 
 The current frontend is <https://stockmarket.samfelton.com> (Pages alias <https://stockmarket-convex.pages.dev>), using <https://effervescent-flamingo-244.convex.cloud>.
