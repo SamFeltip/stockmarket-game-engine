@@ -30,8 +30,8 @@ editing it. To update a dependency, publish its commit in its own repository, th
 submodule pointer here. Do not use `git submodule update --remote` to reproduce a pinned checkout.
 
 Keep the sibling layout: consumers import shared TypeScript source directly. A checkout of the web
-repository on its own is no longer sufficient. Feature-branch commits are pinned here; this does not
-merge the existing applications' main branches or deploy either app.
+repository on its own is no longer sufficient. Compatible commits from the web app's `main`
+and TV app's `master` branches are pinned here.
 
 The extraction uses the web working tree's existing rules as its baseline, including the already
 present £500 cash rounding and £8 NatWest opening price. It introduces no rules migration.
@@ -82,3 +82,5 @@ The TV repository's `Verify TV Android build` workflow runs its tests, web bundl
 and Android lint on a standard public Ubuntu runner. It opens the resulting APK and checks every
 built web asset byte-for-byte against `dist`. No app signing secrets, store submission, device
 installation, artifact storage or production deployment are involved.
+
+See [release verification](RELEASE_VERIFICATION.md) for the main/master deployment and prepared TV build.

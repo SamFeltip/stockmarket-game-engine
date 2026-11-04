@@ -1,9 +1,12 @@
 [submodule "stockmarket-convex"]
 	path = stockmarket-convex
 	url = https://github.com/SamFeltip/stockmarket.js.git
+	branch = main
 [submodule "stockmarket-tv"]
 	path = stockmarket-tv
 	url = https://github.com/SamFeltip/stockmarket-tv.git
+	branch = master
 [submodule "stockmarket-old"]
 	path = stockmarket-old
 	url = https://github.com/SamFeltip/stockmarket.git
+	branch = main
