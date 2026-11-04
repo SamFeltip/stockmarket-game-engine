@@ -17,7 +17,7 @@ It tracks `stockmarket-shared` and `stockmarket-ai` directly. The web game, TV a
 Go/HTMX project are Git submodules pinned to compatible commits, retaining their own repositories
 and histories. Additional local development worktrees remain ignored.
 
-Clone the complete workspace (authentication is required for this private parent repository):
+Clone the complete public workspace (no GitHub authentication is required):
 
 ```sh
 git clone --recurse-submodules https://github.com/SamFeltip/stockmarket-game-engine.git stockmarket
