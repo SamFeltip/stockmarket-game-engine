@@ -1,0 +1,15 @@
+
+# Local experiments and review screenshots
+experiments/
+
+# Existing projects retain their own repositories and worktrees.
+stockmarket/
+stockmarket-convex/
+stockmarket-convex-cash-dock/
+stockmarket-tv/
+stockmarket-tv-share-suspended/
+**/node_modules/
+**/dist/
+**/.vite/
+**/coverage/
+.DS_Store

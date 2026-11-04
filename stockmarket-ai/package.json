@@ -1,0 +1,20 @@
+{
+  "name": "@stockmarket/ai-environment",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22.18"
+  },
+  "scripts": {
+    "test": "node --experimental-strip-types --import ./register.mjs --test tests/*.test.ts",
+    "check": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.3",
+    "@types/node": "^22.0.0"
+  },
+  "exports": {
+    ".": "./src/index.ts"
+  }
+}
