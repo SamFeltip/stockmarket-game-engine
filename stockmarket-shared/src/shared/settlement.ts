@@ -22,6 +22,29 @@ export function roundPrices(prices: Price[], insights: Insight[], stocks: Stock[
     });
 }
 
+/** Each card occupies an equal fraction of its stock's fixed-width round column.
+ * Compute every point from the opening price so a temporary dip below zero does
+ * not change the settlement rules for the remaining cards. */
+export function roundPriceSteps(prices: Price[], insights: Insight[], stocks: Stock[], suspended: number[],
+    allInsights: Insight[] = insights)
+{
+    return prices.filter((price) => stocks.some((stock) => stock.key === price.stockKey && stock.display))
+        .map((price) =>
+        {
+            let change = 0;
+            const cards = insights.filter((card) => card.stockKey === price.stockKey);
+            const count = allInsights.filter((card) => card.stockKey === price.stockKey).length;
+            const values = cards.map((card) =>
+            {
+                change += card.value;
+
+                return settledPrice(price.value, suspended.includes(price.stockKey) ? 0 : change);
+            });
+
+            return { stockKey: price.stockKey, values, count };
+        });
+}
+
 export function roundCash(player: { _id: string; cash: number }, insights: Insight[], stocks: Stock[])
 {
     const change = insights.filter((insight) => insight.playerId === player._id

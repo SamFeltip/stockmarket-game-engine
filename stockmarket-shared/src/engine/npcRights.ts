@@ -16,6 +16,13 @@ export async function advanceNpcRights(context: MutationContext, game: Document_
             break;
         }
 
+        if (context.effects.npcRightsLater)
+        {
+            await context.effects.npcRightsLater({ gameId: game._id, insightId: issue.insightId, index: issue.index });
+
+            return;
+        }
+
         const price = game.prices.find((item) => item.stockKey === issue.stockKey)?.value ?? 0;
 
         const available = rightsAvailable(await members(context, game._id), issue.stockKey);

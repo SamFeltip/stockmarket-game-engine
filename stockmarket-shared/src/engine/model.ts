@@ -13,7 +13,7 @@ export interface Tables {
         rulesVersion?: number; rosterRevision?: number; catalogVersion?: string;
         periodCount: number; currentPeriod: number; turn: number;
         status: "waiting" | "playing" | "closed" | "special_insights" | "finished";
-        prices: Prices; priceHistory?: { period: number; prices: Prices }[];
+        prices: Prices; priceHistory?: { period: number; prices: Prices; steps?: { stockKey: number; values: number[]; count: number }[] }[];
         suspended: number[]; suspensionPeriod?: number;
         rightsIssue?: {
             insightId: Id<"playerInsights">; stockKey: number; actorPlayerId: Id<"players">;
@@ -66,6 +66,7 @@ export interface MutationContext extends QueryContext {
     random(): number;
     effects: {
         enqueueNextNpc(gameId: Id<"games">): Promise<void>;
+        npcRightsLater?(command: { gameId: Id<"games">; insightId: Id<"playerInsights">; index: number }): Promise<void>;
         finishRightsLater(command: { gameId: Id<"games">; insightId: Id<"playerInsights"> }): Promise<void>;
     };
 }

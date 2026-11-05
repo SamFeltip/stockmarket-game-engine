@@ -1,6 +1,6 @@
 import type { MutationContext, Document_ } from "./model";
 import { withRoleBonuses } from "../shared/company-roles";
-import { roundCash, roundPrices } from "../shared/settlement";
+import { roundCash, roundPrices, roundPriceSteps } from "../shared/settlement";
 import { deal, fail, feedItem, members, roundInsights } from "./library";
 
 import { publicSeats } from "./legalActions";
@@ -47,7 +47,8 @@ export async function advancePeriod(context: MutationContext, game: Document_<"g
     const currentPeriod = finished ? game.currentPeriod : game.currentPeriod + 1;
     const priceHistory = [
         ...game.priceHistory ?? [{ period: game.currentPeriod, prices: game.prices }],
-        { period: game.currentPeriod + 1, prices },
+        { period: game.currentPeriod + 1, prices,
+            steps: roundPriceSteps(game.prices, effectiveInsights, stocks, game.suspended) },
     ];
 
     await context.db.patch(game._id, { prices, priceHistory, status: finished ? "finished" : "playing", currentPeriod,
