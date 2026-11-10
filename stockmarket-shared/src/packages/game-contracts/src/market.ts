@@ -1,4 +1,4 @@
-import { sharesPerCompany, validTradeQuantity } from "../../../shared/rules";
+import { sharesAvailable, sharesPerCompany, validTradeQuantity } from "../../../shared/rules";
 import type { Action, Market } from "./index";
 
 export function money(value: number): number
@@ -33,20 +33,12 @@ export function tradeError(market: Market, action: Action): string | undefined
 
     const signed = action.kind === "buy" ? action.quantity : -action.quantity;
     const cost = money(signed * price);
-    const available
-        = sharesPerCompany
-          - market.players.reduce(
-              (sum, seat) =>
-                  sum
-                  + (seat.holdings.find((item) => item.stockKey === action.stockKey)?.quantity ?? 0),
-              0,
-          );
     if (!Number.isFinite(cost))
     {
         return "This stock cannot be traded";
     }
 
-    if (signed > available)
+    if (signed > sharesAvailable(market.players, action.stockKey))
     {
         return "Not enough shares available";
     }
