@@ -67,6 +67,7 @@ export interface MutationContext extends QueryContext {
     effects: {
         enqueueNextNpc(gameId: Id<"games">): Promise<void>;
         npcRightsLater?(command: { gameId: Id<"games">; insightId: Id<"playerInsights">; index: number }): Promise<void>;
+        npcSuspensionLater?(command: { gameId: Id<"games">; insightId: Id<"playerInsights"> }): Promise<void>;
         finishRightsLater(command: { gameId: Id<"games">; insightId: Id<"playerInsights"> }): Promise<void>;
     };
 }

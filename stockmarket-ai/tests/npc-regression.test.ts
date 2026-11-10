@@ -4,15 +4,15 @@ import { createHash } from "node:crypto";
 import { GameEnvironment, npcAction, emptyMemory, roster } from "../src/index";
 import type { NpcMemory } from "../src/index";
 
-// Baselines include rights purchases rounded to trading lots. Hash every private decision view,
+// Baselines include lot-rounded Rights Issues and two-period Debenture expiry. Hash every private decision view,
 // action, returned memory and reason, plus final rewards. No wall-clock data.
 const baselines = [
-    { seed: 42, players: 4, periods: 6, steps: 83,
-        hash: "8a0081e71ff1b0c3f14d649a89d3bd52d36dcc99d2cf557aa1409245a1dc95b6" },
-    { seed: 718, players: 6, periods: 10, steps: 201,
-        hash: "7bd370d5f2eab7fc8e8728ebb7b3e70273375c7f665da7a3f9ca73b0a2dd9e52" },
-    { seed: 33, players: 5, periods: 7, steps: 120,
-        hash: "3d5945b31fb2cfdb4df99025a0fd000789d50f53aaeb62c9dddf7bb789b154c4" },
+    { seed: 42, players: 4, periods: 6, steps: 85,
+        hash: "da871a987228fe99c7fbe8795eade819166149c88ec9d56aa464082ea33ae3f1" },
+    { seed: 718, players: 6, periods: 10, steps: 208,
+        hash: "e1f447599598b220bfbcebd5efdf5875b7a5a5c7e8475bb2f7eaedbbefa6bdcf" },
+    { seed: 33, players: 5, periods: 7, steps: 121,
+        hash: "8eba2d96600202cd1e10e76086c28d09f929c5d9c67fb90ad723c7a6103fdfea" },
 ];
 
 for (const baseline of baselines) {

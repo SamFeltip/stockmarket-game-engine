@@ -1,5 +1,6 @@
 import type { MutationContext, QueryContext, Document_, Id } from "./model";
 import { restoreDirectorPriority } from "./roleHistory";
+import { debentureInHand } from "../shared/debenture";
 import { cashStock } from "../shared/chance-cards";
 import { portfolioWorth } from "../shared/settlement";
 import { stockCatalog, insightCatalog } from "../catalog";
@@ -56,10 +57,11 @@ export async function deal(context: MutationContext, game: Document_<"games">, p
     const snapshot = await context.db.query("gameCatalogs").withIndex("by_game", (q) => q.eq("gameId", game._id)).unique();
     const retained = (await context.db.query("playerInsights")
         .withIndex("by_game_period", (q) => q.eq("gameId", game._id)).collect())
-        .filter((card) => card.chanceKind === "debenture" && !card.used);
+        .filter((card) => card.chanceKind === "debenture" && debentureInHand(card, game.currentPeriod));
     const heldIds = new Set(retained.map((card) => card.catalogCardId).filter(Boolean));
-    const deck = snapshot ? snapshot.cards.filter((card) => !heldIds.has(card.id)) : (await context.db.query("insights").collect())
+    const catalog = snapshot?.cards ?? (await context.db.query("insights").collect())
         .map((card) => ({ ...card, id: String(card._id) }));
+    const deck = catalog.filter((card) => !heldIds.has(card.id));
     if (deck.length < players.length * 10)
     {
         fail("Not enough insights for all players");

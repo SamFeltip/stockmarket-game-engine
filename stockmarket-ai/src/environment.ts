@@ -11,6 +11,7 @@ import { spendSuspension } from "../../stockmarket-shared/src/engine/suspensions
 import { buildNpcObservation } from "../../stockmarket-shared/src/engine/observation";
 import { publicSeats } from "../../stockmarket-shared/src/engine/legalActions";
 import { pendingSuspensions } from "../../stockmarket-shared/src/shared/suspensions";
+import { debentureInHand } from "../../stockmarket-shared/src/shared/debenture";
 import { rightsAvailable, rightsIssuePrice } from "../../stockmarket-shared/src/shared/rights-issue";
 import { roundPrices, portfolioWorth } from "../../stockmarket-shared/src/shared/settlement";
 import { withRoleBonuses } from "../../stockmarket-shared/src/shared/company-roles";
@@ -150,8 +151,11 @@ export class GameEnvironment {
             const token = `${game.currentPeriod}:${game.turn}:${phase}:${cardId}:${issue?.index ?? 0}`;
             const hand = await this.store.query("playerInsights").withIndex("by_player_period", (query) =>
                 query.eq("playerId", playerId)).collect();
-            const ownCards = hand.map((card) => ({ id: card._id, stockKey: card.stockKey, value: card.value,
-                period: card.period, chanceKind: card.chanceKind, used: card.used ?? false, resolved: card.resolved }));
+            const ownCards = hand.filter((card) => card.chanceKind !== "debenture" || card.period === game.currentPeriod
+                || debentureInHand(card, game.currentPeriod)).map((card) => ({
+                id: card._id, stockKey: card.stockKey, value: card.value, period: card.period,
+                chanceKind: card.chanceKind, used: card.used ?? false, resolved: card.resolved,
+            }));
             const view = { playerId, token, observation, ownCards };
             if (phase === "rights") {
                 return { ...view, phase, maximum: issue!.offers[issue!.index].maximum,

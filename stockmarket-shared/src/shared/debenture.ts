@@ -1,3 +1,9 @@
+/** A debenture can be used in the period it was dealt and the following period. */
+export function debentureInHand(card: { period: number; used?: boolean }, currentPeriod: number)
+{
+    return !card.used && card.period <= currentPeriod && currentPeriod < card.period + 2;
+}
+
 interface Price { stockKey: number; value: number }
 interface Snapshot { period: number; prices: Price[] }
 

@@ -1,4 +1,4 @@
-import { floorTradeQuantity, sharesPerCompany, validTradeQuantity } from "./rules";
+import { floorTradeQuantity, validTradeQuantity } from "./rules";
 /** Retail Rights Issue: one new share per two held, at £1 each. */
 export const rightsIssuePrice = 1;
 
@@ -42,9 +42,4 @@ export function rightsPurchaseError(quantity: number, maximum: number, cash: num
     return quantity * rightsIssuePrice > cash ? "You don't have enough cash. Try fewer shares." : "";
 }
 
-/** Preserve the game's existing bank inventory where the retail review is silent. */
-export function rightsAvailable(players: { holdings: { stockKey: number; quantity: number }[] }[], stockKey: number)
-{
-    return Math.max(0, sharesPerCompany - players.reduce((sum, player) => sum
-      + (player.holdings.find((holding) => holding.stockKey === stockKey)?.quantity ?? 0), 0));
-}
+export { sharesAvailable as rightsAvailable } from "./rules";

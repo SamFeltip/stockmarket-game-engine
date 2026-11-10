@@ -4,6 +4,7 @@ import { chanceStockKey, governmentLoanAmount } from "../shared/chance-cards";
 import { transition, tradeError } from "../packages/game-contracts/src";
 import { fail, feedItem, members } from "./library";
 import { isCurrent } from "./seats";
+import { debentureInHand } from "../shared/debenture";
 import { debentureOffers } from "./debenture";
 import { marketFor } from "./legalActions";
 export async function applyTurn(
@@ -61,8 +62,8 @@ export async function applyTurn(
     else if (action.kind === "debenture")
     {
         const card = await context.db.get(action.insightId);
-        if (!card || card.gameId !== game._id || card.playerId !== player._id || card.period > game.currentPeriod
-          || card.stockKey !== chanceStockKey || card.chanceKind !== "debenture" || card.used)
+        if (!card || card.gameId !== game._id || card.playerId !== player._id || card.stockKey !== chanceStockKey
+          || card.chanceKind !== "debenture" || !debentureInHand(card, game.currentPeriod))
         {
             fail("This Debenture card cannot be used");
         }

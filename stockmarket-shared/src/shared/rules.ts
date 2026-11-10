@@ -2,6 +2,13 @@ export const startingCash = 60_000;
 
 export const sharesPerCompany = 200_000;
 
+export function sharesAvailable(players: readonly { holdings: readonly { stockKey: number; quantity: number }[] }[],
+    stockKey: number)
+{
+    return Math.max(0, sharesPerCompany - players.reduce((sum, player) => sum
+      + (player.holdings.find((holding) => holding.stockKey === stockKey)?.quantity ?? 0), 0));
+}
+
 export const gameLengths = [6, 7, 8, 9, 10];
 
 export const minimumPlayers = 4;
