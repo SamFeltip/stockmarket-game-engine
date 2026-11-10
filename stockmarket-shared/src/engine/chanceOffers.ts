@@ -3,6 +3,7 @@ import type { QueryContext, Document_ } from "./model";
 import { chanceStockKey, governmentLoanAmount } from "../shared/chance-cards";
 import { rightsAvailable, rightsEntitlement, rightsIssuePrice } from "../shared/rights-issue";
 import { rightsPurchase } from "../packages/npc-engine/src/chance";
+import { debentureInHand } from "../shared/debenture";
 import { debentureOffers } from "./debenture";
 
 export async function chanceOffers(context: QueryContext, game: Document_<"games">,
@@ -15,7 +16,7 @@ export async function chanceOffers(context: QueryContext, game: Document_<"games
     for (const card of cards.filter((item) => item.gameId === game._id && item.stockKey === chanceStockKey
       && !item.used && item.period <= game.currentPeriod))
     {
-        if (card.chanceKind === "debenture")
+        if (card.chanceKind === "debenture" && debentureInHand(card, game.currentPeriod))
         {
             for (const offer of debentures.filter((item) => !item.unavailableReason && item.amount !== null))
             {
