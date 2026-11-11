@@ -70,6 +70,19 @@ export async function gameStocks(context: QueryContext, game: Document_<"games">
     return packStocks(context, game.pack, game.techStart);
 }
 
+export async function displayGameStocks(context: QueryContext, game: Document_<"games">)
+{
+    const stocks = await gameStocks(context, game);
+    if (game.pack === "tech")
+    {
+        return stocks;
+    }
+
+    return stocks.map((stock) => ({ ...stock, variation: game.pack === "frantic" ? stock.variation
+        : stockCatalog.find((item) => item.key === stock.key)?.variation ?? stock.variation }))
+        .toSorted((a, b) => a.variation - b.variation);
+}
+
 export async function gameStock(context: QueryContext, game: Document_<"games">, key: number)
 {
     return game.pack === "tech" ? techStocks.find((stock) => stock.key === key)

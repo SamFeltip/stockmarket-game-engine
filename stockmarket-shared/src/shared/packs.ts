@@ -20,14 +20,19 @@ export function packLengths(pack?: Pack)
     return pack === "tech" ? techLengths : gameLengths;
 }
 
+export function packRoundsPerPeriod(pack?: Pack)
+{
+    return pack === "tech" ? techRoundsPerBlock : 1;
+}
+
 export function packRounds(pack: Pack | undefined, periods: number)
 {
-    return pack === "tech" ? periods * techRoundsPerBlock : periods;
+    return periods * packRoundsPerPeriod(pack);
 }
 
 export function packPeriods(pack: Pack | undefined, rounds: number)
 {
-    return pack === "tech" ? Math.ceil(rounds / techRoundsPerBlock) : rounds;
+    return Math.ceil(rounds / packRoundsPerPeriod(pack));
 }
 
 export function roundWithinPeriod(round: number)
