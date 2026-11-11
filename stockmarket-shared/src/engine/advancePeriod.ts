@@ -1,10 +1,11 @@
+import { deal } from "./dealing";
 import type { MutationContext, Document_ } from "./model";
 import { gameStocks, settlementInsights } from "./packRules";
 import { roundCash, roundPrices, roundPriceSteps } from "../shared/settlement";
-import { deal, fail, feedItem, members, roundInsights } from "./library";
+import { fail, feedItem, members, roundInsights } from "./library";
 
 import { publicSeats } from "./legalActions";
-import { packPeriods, roundWithinPeriod } from "../shared/packs";
+import { packPeriods, packRoundsPerPeriod, roundWithinPeriod } from "../shared/packs";
 import { pendingSuspensions } from "../shared/suspensions";
 
 export async function advancePeriod(context: MutationContext, game: Document_<"games">, expectedPeriod: number)
@@ -61,7 +62,8 @@ export async function advancePeriod(context: MutationContext, game: Document_<"g
     {
         await deal(context, { ...game, currentPeriod }, players);
         const period = packPeriods(game.pack, currentPeriod + 1);
-        const title = game.pack === "tech" ? `Period ${period} · Round ${roundWithinPeriod(currentPeriod)}` : `Period ${period}`;
+        const title = packRoundsPerPeriod(game.pack) > 1
+            ? `Period ${period} · Round ${roundWithinPeriod(game.pack, currentPeriod)}` : `Period ${period}`;
 
         await feedItem(context, { ...game, currentPeriod }, title,
             "Players get another turn", "/static/imgs/icons/Stock.svg", "grey");

@@ -5,17 +5,18 @@ import { rightsAvailable, rightsMaximum, rightsPriceFor } from "../shared/rights
 import { rightsPurchase } from "../packages/npc-engine/src/chance";
 import { debentureInHand } from "../shared/debenture";
 import { debentureOffers } from "./debenture";
+import { playerPeriodInsights, retainedDebentures } from "./dealing";
 
 export async function chanceOffers(context: QueryContext, game: Document_<"games">,
     self: Document_<"players">, players: Document_<"players">[]): Promise<ChanceOffer[]>
 {
-    const cards = await context.db.query("playerInsights").withIndex("by_player_period", (q) =>
-        q.eq("playerId", self._id)).collect();
+    const cards = (await retainedDebentures(context, game, self._id))
+        .concat(await playerPeriodInsights(context, self._id, game.currentPeriod));
     const debentures = cards.some((card) => card.chanceKind === "debenture" && debentureInHand(card, game.currentPeriod))
         ? await debentureOffers(context, game, self) : [];
     const offers: ChanceOffer[] = [];
     for (const card of cards.filter((item) => item.gameId === game._id && item.stockKey === chanceStockKey
-      && !item.used && item.period <= game.currentPeriod))
+      && !item.used))
     {
         if (card.chanceKind === "debenture" && debentureInHand(card, game.currentPeriod))
         {

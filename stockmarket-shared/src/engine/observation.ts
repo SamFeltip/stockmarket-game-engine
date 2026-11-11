@@ -2,7 +2,8 @@ import { gameStocks } from "./packRules";
 import type { NpcObservation } from "../packages/game-contracts/src";
 import type { QueryContext, Document_ } from "./model";
 import { legalActions } from "../packages/game-contracts/src";
-import { members, privateForecasts } from "./library";
+import { members } from "./library";
+import { playerPeriodInsights, privateForecasts } from "./dealing";
 import { publicSeats } from "./legalActions";
 import { chanceOffers } from "./chanceOffers";
 export async function buildNpcObservation(
@@ -12,12 +13,8 @@ export async function buildNpcObservation(
 ): Promise<NpcObservation>
 {
     const players = await members(context, game._id);
-    const hand = game.pack === "tech" ? await privateForecasts(context, game, self._id) : await context.db
-        .query("playerInsights")
-        .withIndex("by_player_period", (q) =>
-            q.eq("playerId", self._id).eq("period", game.currentPeriod),
-        )
-        .collect();
+    const hand = game.pack === "tech" ? await privateForecasts(context, game, self._id)
+        : await playerPeriodInsights(context, self._id, game.currentPeriod);
     const catalog = await context.db
         .query("gameCatalogs")
         .withIndex("by_game", (q) => q.eq("gameId", game._id))

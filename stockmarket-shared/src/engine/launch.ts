@@ -1,7 +1,8 @@
+import { deal } from "./dealing";
 import type { MutationContext, Document_ } from "./model";
 import { specialDeck } from "../shared/chance-cards";
 import { minimumPlayers, maximumPlayers } from "../shared/rules";
-import { deal, fail, feedItem, members, seedCatalog } from "./library";
+import { fail, feedItem, members, seedCatalog } from "./library";
 import { spectatorHost } from "./hosting";
 import { franticDeck, gameStocks, validPackLength } from "./packRules";
 import { packPeriods } from "../shared/packs";
