@@ -78,9 +78,12 @@ export async function displayGameStocks(context: QueryContext, game: Document_<"
         return stocks;
     }
 
-    return stocks.map((stock) => ({ ...stock, variation: game.pack === "frantic" ? stock.variation
-        : stockCatalog.find((item) => item.key === stock.key)?.variation ?? stock.variation }))
-        .toSorted((a, b) => a.variation - b.variation);
+    return stocks.map((stock) =>
+    {
+        const position = stockCatalog.find((item) => item.key === stock.key)?.variation ?? stock.variation;
+
+        return { position, stock: game.pack === "frantic" ? stock : { ...stock, variation: position } };
+    }).sort((a, b) => a.position - b.position).map(({ stock }) => stock);
 }
 
 export async function gameStock(context: QueryContext, game: Document_<"games">, key: number)
