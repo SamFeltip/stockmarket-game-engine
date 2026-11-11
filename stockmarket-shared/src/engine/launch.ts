@@ -1,8 +1,9 @@
 import type { MutationContext, Document_ } from "./model";
 import { specialDeck } from "../shared/chance-cards";
-import { minimumPlayers, maximumPlayers, validGameLength } from "../shared/rules";
+import { minimumPlayers, maximumPlayers } from "../shared/rules";
 import { deal, fail, feedItem, members, seedCatalog } from "./library";
 import { spectatorHost } from "./hosting";
+import { franticDeck, gameStocks, validPackLength } from "./packRules";
 
 export async function launchGame(context: MutationContext, game: Document_<"games">, allowNpcs = true)
 {
@@ -17,7 +18,7 @@ export async function launchGame(context: MutationContext, game: Document_<"game
         fail("At least four players are required");
     }
 
-    if (!validGameLength(game.periodCount))
+    if (!validPackLength(game.pack, game.periodCount))
     {
         fail("Invalid game length");
     }
@@ -34,18 +35,19 @@ export async function launchGame(context: MutationContext, game: Document_<"game
     }
 
     await seedCatalog(context);
-    const cards = await context.db.query("insights").collect();
-    const stocks = await context.db.query("stocks").collect();
+    const cards = game.pack === "tech" ? [] : await context.db.query("insights").collect();
+    const stocks = await gameStocks(context, game);
     if (hasNpcs && cards.some((card) => !stocks.some((stock) => stock.key === card.stockKey && stock.display)))
     {
         fail("NPC games require an ordinary-only insight catalog");
     }
 
-    const catalogVersion = `boardgame-108-v2:${game._id}`;
+    const catalogVersion = `${!game.pack || game.pack === "classic" ? "boardgame-108-v2" : game.pack}:${game._id}`;
+    const ordinary = cards.map((card) => ({ id: String(card._id), stockKey: card.stockKey, value: card.value,
+        description: card.description }));
+    const deck = game.pack === "tech" ? [] : (game.pack === "frantic" ? franticDeck(ordinary) : ordinary.concat(specialDeck()));
 
-    await context.db.insert("gameCatalogs", { gameId: game._id, version: catalogVersion,
-        cards: cards.map((card) => ({ id: String(card._id), stockKey: card.stockKey, value: card.value,
-            description: card.description })).concat(specialDeck()) });
+    await context.db.insert("gameCatalogs", { gameId: game._id, version: catalogVersion, cards: deck });
 
     for (const [index, seat] of players.entries())
     {

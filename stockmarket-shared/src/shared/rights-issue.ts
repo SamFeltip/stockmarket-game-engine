@@ -1,8 +1,15 @@
 import { floorTradeQuantity, validTradeQuantity } from "./rules";
+import type { Pack } from "./packs";
+
 /** Retail Rights Issue: one new share per two held, at £1 each. */
 export const rightsIssuePrice = 1;
 
-export const rightsEntitlement = (held: number) => floorTradeQuantity(held / 2);
+export const rightsEntitlement = (held: number, pack?: Pack) => floorTradeQuantity(pack === "frantic" ? held : held / 2);
+
+export function rightsMaximum(held: number, pack?: Pack, isActor = false)
+{
+    return pack === "frantic" && isActor ? Math.max(1000, rightsEntitlement(held, pack)) : rightsEntitlement(held, pack);
+}
 
 export interface RightsIssue {
     insightId: string;
@@ -22,7 +29,7 @@ export function rightsIssueOrder<T extends { _id: string }>(players: T[], actorI
     return [...players.slice(start), ...players.slice(0, start)];
 }
 
-export function rightsPurchaseError(quantity: number, maximum: number, cash: number)
+export function rightsPurchaseError(quantity: number, maximum: number, cash: number, pack?: Pack)
 {
     if (!Number.isSafeInteger(quantity) || quantity < 0)
     {
@@ -31,7 +38,8 @@ export function rightsPurchaseError(quantity: number, maximum: number, cash: num
 
     if (quantity > maximum)
     {
-        return "You may only buy one extra share for every two you owned when the Rights Issue started.";
+        return pack === "frantic" ? "Choose a quantity within your offer."
+            : "You may only buy one extra share for every two you owned when the Rights Issue started.";
     }
 
     if (quantity !== 0 && !validTradeQuantity(quantity))

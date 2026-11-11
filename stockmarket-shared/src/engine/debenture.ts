@@ -1,10 +1,11 @@
+import { gameStocks } from "./packRules";
 import type { QueryContext, Document_ } from "./model";
 import { bankruptcyPeriod } from "../shared/debenture";
 
 export async function debentureOffers(context: QueryContext, game: Document_<"games">, player: Document_<"players">)
 {
     const history = game.priceHistory ?? [];
-    const stocks = (await context.db.query("stocks").collect()).filter((stock) => stock.display);
+    const stocks = (await gameStocks(context, game)).filter((stock) => stock.display);
 
     return player.holdings.filter((holding) => holding.quantity > 0
       && stocks.some((stock) => stock.key === holding.stockKey)

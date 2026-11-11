@@ -1,5 +1,6 @@
 import type { Action, NpcProfile } from "../packages/game-contracts/src";
 import type { ChanceKind, DeckCard } from "../shared/chance-cards";
+import type { Pack } from "../shared/packs";
 import type { CompanyRole } from "../shared/company-roles";
 
 // Platform-neutral IDs are structurally compatible with the live persistence adapter.
@@ -12,6 +13,7 @@ export interface Tables {
         currentUserId?: Id<"users">; currentPlayerId?: Id<"players">; npcDifficulty?: NpcProfile["difficulty"];
         rulesVersion?: number; rosterRevision?: number; catalogVersion?: string;
         periodCount: number; currentPeriod: number; turn: number;
+        pack?: Pack; techStart?: number; standardPeriodCount?: number;
         status: "waiting" | "playing" | "closed" | "special_insights" | "finished";
         prices: Prices; priceHistory?: { period: number; prices: Prices; steps?: { stockKey: number; values: number[]; count: number }[] }[];
         suspended: number[]; suspensionPeriod?: number;
@@ -33,7 +35,7 @@ export interface Tables {
         secondaryImagePath: string; variation: number; display: boolean };
     insights: { key: number; stockKey: number; description: string; value: number };
     playerInsights: { gameId: Id<"games">; playerId: Id<"players">; period: number; stockKey: number;
-        description: string; value: number; resolved: boolean; used?: boolean; catalogCardId?: string; chanceKind?: ChanceKind };
+        description: string; value: number; resolved: boolean; used?: boolean; catalogCardId?: string; chanceKind?: ChanceKind; forecast?: DeckCard["forecast"] };
     gameCatalogs: { gameId: Id<"games">; version: string; cards: DeckCard[] };
     gameActions: { gameId: Id<"games">; period: number; turn: number; actorPlayerId: Id<"players">;
         action: Action | { kind: "government-loan"; insightId: Id<"playerInsights"> }

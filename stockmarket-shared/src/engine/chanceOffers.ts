@@ -1,7 +1,7 @@
 import type { ChanceOffer } from "../packages/game-contracts/src";
 import type { QueryContext, Document_ } from "./model";
-import { chanceStockKey, governmentLoanAmount } from "../shared/chance-cards";
-import { rightsAvailable, rightsEntitlement, rightsIssuePrice } from "../shared/rights-issue";
+import { chanceStockKey, loanAmount } from "../shared/chance-cards";
+import { rightsAvailable, rightsMaximum, rightsIssuePrice } from "../shared/rights-issue";
 import { rightsPurchase } from "../packages/npc-engine/src/chance";
 import { debentureInHand } from "../shared/debenture";
 import { debentureOffers } from "./debenture";
@@ -26,14 +26,14 @@ export async function chanceOffers(context: QueryContext, game: Document_<"games
         }
         else if (card.period === game.currentPeriod && card.chanceKind === "loan")
         {
-            offers.push({ action: { kind: "government-loan", insightId: card._id }, amount: governmentLoanAmount });
+            offers.push({ action: { kind: "government-loan", insightId: card._id }, amount: loanAmount(game.pack) });
         }
         else if (card.period === game.currentPeriod && card.chanceKind === "rights" && !card.resolved)
         {
             for (const price of game.prices)
             {
-                const maximum = rightsEntitlement(self.holdings.find((item) => item.stockKey === price.stockKey)
-                    ?.quantity ?? 0);
+                const maximum = rightsMaximum(self.holdings.find((item) => item.stockKey === price.stockKey)
+                    ?.quantity ?? 0, game.pack, true);
                 const quantity = rightsPurchase(price.value, maximum, self.cash,
                     rightsAvailable(players, price.stockKey));
                 if (quantity > 0)

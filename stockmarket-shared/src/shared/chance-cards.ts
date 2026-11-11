@@ -1,9 +1,13 @@
+import type { Pack } from "./packs";
+
 /** Non-tradable keys kept separate from recovered/imported positive stock IDs. */
 export const cashStockKey = -1;
 
 export const chanceStockKey = -2;
 
 export const governmentLoanAmount = 10_000;
+
+export const loanAmount = (pack?: Pack) => pack === "frantic" ? 30_000 : governmentLoanAmount;
 
 export const chanceCards = [
     { kind: "rights", name: "Rights Issue", icon: "+", effect: "Buy extra shares at £1 each", description: "Choose one company. Every holder may immediately buy one extra share for every two they own, at £1 per extra share.", timing: "Uses one turn. Unused cards return to the deck at the end of the period." },
@@ -26,17 +30,20 @@ export interface DeckCard {
     value: number;
     description: string;
     chanceKind?: ChanceKind;
+    forecast?: { from: number; to: number };
 }
 
 /** Retail deck: 8 currency cards (4 each ±10%) and 8 chance cards; no Options. */
-export function specialDeck(): DeckCard[]
+export function specialDeck(pack?: Pack): DeckCard[]
 {
+    const frantic = pack === "frantic";
+
     return [
-        ...[10, -10].flatMap((percent) => Array.from({ length: 4 }, (_, copy) => ({
+        ...(frantic ? [25, -15] : [10, -10]).flatMap((percent) => Array.from({ length: frantic ? 6 : 4 }, (_, copy) => ({
             id: `boardgame:cash:${percent}:${copy}`, stockKey: cashStockKey,
             value: percent / 100, description: `Cash ${percent > 0 ? "+" : ""}${percent}%`,
         }))),
-        ...chanceCards.filter((card) => card.kind !== "option").flatMap((card) => Array.from({ length: 2 }, (_, copy) => ({
+        ...chanceCards.filter((card) => card.kind !== "option").flatMap((card) => Array.from({ length: frantic ? 5 : 2 }, (_, copy) => ({
             id: `boardgame:chance:${card.kind}:${copy}`, stockKey: chanceStockKey,
             value: 0, description: card.name, chanceKind: card.kind,
         }))),

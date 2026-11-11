@@ -1,5 +1,5 @@
 import type { MutationContext, Document_ } from "./model";
-import { withRoleBonuses } from "../shared/company-roles";
+import { gameStocks, settlementInsights } from "./packRules";
 import { roundCash, roundPrices, roundPriceSteps } from "../shared/settlement";
 import { deal, fail, feedItem, members, roundInsights } from "./library";
 
@@ -14,7 +14,7 @@ export async function advancePeriod(context: MutationContext, game: Document_<"g
     }
 
     const insights = await roundInsights(context, game);
-    const stocks = await context.db.query("stocks").collect();
+    const stocks = await gameStocks(context, game);
     const holds = new Set(stocks.filter((stock) => stock.name === "Hold Stock Price").map((stock) => stock.key));
     if (insights.some((insight) => holds.has(insight.stockKey) && !insight.resolved))
     {
@@ -27,7 +27,7 @@ export async function advancePeriod(context: MutationContext, game: Document_<"g
         fail("Wait for Share Suspended decisions");
     }
 
-    const effectiveInsights = withRoleBonuses(insights, players, stocks);
+    const effectiveInsights = settlementInsights(game, insights, players, stocks);
     const prices = roundPrices(game.prices, effectiveInsights, stocks, game.suspended);
     for (const seat of players)
     {

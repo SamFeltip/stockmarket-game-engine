@@ -1,3 +1,4 @@
+import { gameStocks } from "./packRules";
 import type { MutationContext, Document_ } from "./model";
 import { fail, feedItem } from "./library";
 import { publicIdentity } from "./identity";
@@ -13,7 +14,7 @@ export function checkSuspensionPhase(game: Document_<"games">, expectedPeriod: n
 export async function spendSuspension(context: MutationContext, game: Document_<"games">,
     card: Document_<"playerInsights">, stockKey?: number)
 {
-    const stocks = await context.db.query("stocks").collect();
+    const stocks = await gameStocks(context, game);
     const owner = await context.db.get(card.playerId);
     if (!owner)
     {

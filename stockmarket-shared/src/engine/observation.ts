@@ -1,7 +1,8 @@
+import { gameStocks } from "./packRules";
 import type { NpcObservation } from "../packages/game-contracts/src";
 import type { QueryContext, Document_ } from "./model";
 import { legalActions } from "../packages/game-contracts/src";
-import { members } from "./library";
+import { members, privateForecasts } from "./library";
 import { publicSeats } from "./legalActions";
 import { chanceOffers } from "./chanceOffers";
 export async function buildNpcObservation(
@@ -11,7 +12,7 @@ export async function buildNpcObservation(
 ): Promise<NpcObservation>
 {
     const players = await members(context, game._id);
-    const hand = await context.db
+    const hand = game.pack === "tech" ? await privateForecasts(context, game, self._id) : await context.db
         .query("playerInsights")
         .withIndex("by_player_period", (q) =>
             q.eq("playerId", self._id).eq("period", game.currentPeriod),
@@ -26,7 +27,7 @@ export async function buildNpcObservation(
         throw new Error("Missing pinned NPC catalog");
     }
 
-    const stocks = (await context.db.query("stocks").collect()).filter((stock) => stock.display);
+    const stocks = (await gameStocks(context, game)).filter((stock) => stock.display);
     const events = await context.db
         .query("gameActions")
         .withIndex("by_game_period_turn", (q) => q.eq("gameId", game._id))
@@ -45,15 +46,18 @@ export async function buildNpcObservation(
 
     return {
         ...market,
+        ...(game.pack === "tech" ? { opponentDrawSize: 0 }
+            : game.pack === "frantic" ? { opponentDrawSize: 12 } : {}),
         chanceOffers: await chanceOffers(context, game, self, players),
         period: game.currentPeriod,
         finalPeriod: game.periodCount,
         turn: game.turn,
         actionsRemaining,
-        ownInsights: hand.map((card) => ({
+        ownInsights: hand.filter((card) => !card.forecast || (card.forecast.from <= game.currentPeriod
+          && game.currentPeriod < card.forecast.to)).map((card) => ({
             id: card.catalogCardId ?? String(card._id),
             stockKey: card.stockKey,
-            value: card.value,
+            value: card.forecast ? card.value / (card.forecast.to - card.forecast.from) : card.value,
         })),
         catalog: catalog.cards.map(({ id, stockKey, value }) => ({ id, stockKey, value })),
         events: events.filter((event) => !event.rightsIssueId).map(({ period, turn, actorPlayerId, action }) => ({

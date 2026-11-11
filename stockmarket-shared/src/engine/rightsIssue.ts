@@ -1,9 +1,10 @@
+import { gameStocks } from "./packRules";
 import type { MutationContext, Document_, Id } from "./model";
 import { members, fail, feedItem } from "./library";
 import { isCurrent } from "./seats";
 import { finishTurn } from "./commands";
 import { publicIdentity } from "./identity";
-import { rightsEntitlement, rightsIssueOrder, rightsIssuePrice, rightsPurchaseError, rightsAvailable } from "../shared/rights-issue";
+import { rightsMaximum, rightsIssueOrder, rightsIssuePrice, rightsPurchaseError, rightsAvailable } from "../shared/rights-issue";
 import { companyRoles, roleQualification } from "../shared/company-roles";
 import { advanceNpcRights } from "./npcRights";
 import { chanceStockKey } from "../shared/chance-cards";
@@ -33,15 +34,15 @@ export async function activateRightsIssue(context: MutationContext, game: Docume
         fail("This Rights Issue card cannot be used");
     }
 
-    const stocks = await context.db.query("stocks").collect();
+    const stocks = await gameStocks(context, game);
     const stock = stocks.find((item) => item.key === command.stockKey && item.display);
     const seats = await members(context, game._id);
     const offers = rightsIssueOrder(seats, player._id).flatMap((seat) =>
     {
         const held = seat.holdings.find((holding) => holding.stockKey === command.stockKey)?.quantity ?? 0;
 
-        return held > 0
-            ? [{ playerId: seat._id, held, maximum: rightsEntitlement(held) }] : [];
+        return held > 0 || (game.pack === "frantic" && seat._id === player._id)
+            ? [{ playerId: seat._id, held, maximum: rightsMaximum(held, game.pack, seat._id === player._id) }] : [];
     });
     if (!stock)
     {
@@ -87,7 +88,7 @@ export async function purchase(context: MutationContext, game: Document_<"games"
     const issue = game.rightsIssue!;
     const offer = issue.offers[issue.index];
     const player = (await context.db.get(offer.playerId)) ?? fail("Player not found");
-    const reason = rightsPurchaseError(quantity, offer.maximum, player.cash);
+    const reason = rightsPurchaseError(quantity, offer.maximum, player.cash, game.pack);
     if (reason)
     {
         fail(reason);
@@ -100,7 +101,7 @@ export async function purchase(context: MutationContext, game: Document_<"games"
     }
 
     const held = player.holdings.find((holding) => holding.stockKey === issue.stockKey)?.quantity ?? 0;
-    const stock = (await context.db.query("stocks").collect()).find((item) => item.key === issue.stockKey)!;
+    const stock = (await gameStocks(context, game)).find((item) => item.key === issue.stockKey)!;
     const display = await publicIdentity(context, player);
     if (quantity > 0)
     {

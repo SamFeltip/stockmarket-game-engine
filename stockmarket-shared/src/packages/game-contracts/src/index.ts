@@ -73,6 +73,8 @@ export interface NpcObservation extends Market {
     readonly turn: number;
     readonly actionsRemaining: 1 | 2 | 3;
     readonly ownInsights: readonly OwnInsight[];
+    // Historical forecasts describe price movements without causing them.
+    readonly opponentDrawSize?: number;
     readonly catalog: readonly PublicCatalogCard[];
     readonly events: readonly PublicActionEvent[];
     readonly settledPeriods: readonly PublicPeriodSummary[];

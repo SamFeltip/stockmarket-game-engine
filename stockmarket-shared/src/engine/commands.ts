@@ -1,11 +1,12 @@
 import type { MutationContext, Document_, Id } from "./model";
 import { companyRoles, roleQualification, type CompanyRole } from "../shared/company-roles";
-import { chanceStockKey, governmentLoanAmount } from "../shared/chance-cards";
+import { chanceStockKey, loanAmount } from "../shared/chance-cards";
 import { transition, tradeError } from "../packages/game-contracts/src";
 import { fail, feedItem, members } from "./library";
 import { isCurrent } from "./seats";
 import { debentureInHand } from "../shared/debenture";
 import { debentureOffers } from "./debenture";
+import { gameStock } from "./packRules";
 import { marketFor } from "./legalActions";
 export async function applyTurn(
     context: MutationContext,
@@ -56,7 +57,7 @@ export async function applyTurn(
         }
 
         await context.db.patch(card._id, { used: true });
-        await context.db.patch(player._id, { cash: player.cash + governmentLoanAmount });
+        await context.db.patch(player._id, { cash: player.cash + loanAmount(game.pack) });
         message = "received government bonus";
     }
     else if (action.kind === "debenture")
@@ -91,10 +92,7 @@ export async function applyTurn(
     }
     else if (action.kind !== "pass")
     {
-        const stock = await context.db
-            .query("stocks")
-            .withIndex("by_key", (q) => q.eq("key", action.stockKey))
-            .unique();
+        const stock = await gameStock(context, game, action.stockKey);
         if (!stock?.display)
         {
             fail("This stock cannot be traded");
@@ -132,7 +130,7 @@ export async function applyTurn(
     const trade: Partial<Document_<"feed">> = {};
     if (action.kind === "government-loan")
     {
-        trade.cashBonus = governmentLoanAmount;
+        trade.cashBonus = loanAmount(game.pack);
     }
     else if (action.kind === "debenture")
     {
