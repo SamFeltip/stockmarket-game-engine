@@ -7,7 +7,15 @@ export const chanceStockKey = -2;
 
 export const governmentLoanAmount = 10_000;
 
-export const loanAmount = (pack?: Pack) => pack === "frantic" ? 30_000 : governmentLoanAmount;
+export function loanAmount(pack?: Pack)
+{
+    if (pack === "tech")
+    {
+        return 100_000;
+    }
+
+    return pack === "frantic" ? 30_000 : governmentLoanAmount;
+}
 
 export const chanceCards = [
     { kind: "rights", name: "Rights Issue", icon: "+", effect: "Buy extra shares at £1 each", description: "Choose one company. Every holder may immediately buy one extra share for every two they own, at £1 per extra share.", timing: "Uses one turn. Unused cards return to the deck at the end of the period." },
@@ -37,9 +45,10 @@ export interface DeckCard {
 export function specialDeck(pack?: Pack): DeckCard[]
 {
     const frantic = pack === "frantic";
+    const cashPercents = pack === "tech" ? [2, -2] : (frantic ? [25, -15] : [10, -10]);
 
     return [
-        ...(frantic ? [25, -15] : [10, -10]).flatMap((percent) => Array.from({ length: frantic ? 6 : 4 }, (_, copy) => ({
+        ...cashPercents.flatMap((percent) => Array.from({ length: frantic ? 6 : 4 }, (_, copy) => ({
             id: `boardgame:cash:${percent}:${copy}`, stockKey: cashStockKey,
             value: percent / 100, description: `Cash ${percent > 0 ? "+" : ""}${percent}%`,
         }))),

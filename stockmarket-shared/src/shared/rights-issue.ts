@@ -4,6 +4,11 @@ import type { Pack } from "./packs";
 /** Retail Rights Issue: one new share per two held, at £1 each. */
 export const rightsIssuePrice = 1;
 
+export function rightsPriceFor(pack: Pack | undefined, marketPrice: number)
+{
+    return pack === "tech" ? Math.max(0.01, Math.round(marketPrice * 80) / 100) : rightsIssuePrice;
+}
+
 export const rightsEntitlement = (held: number, pack?: Pack) => floorTradeQuantity(pack === "frantic" ? held : held / 2);
 
 export function rightsMaximum(held: number, pack?: Pack, isActor = false)
@@ -29,7 +34,7 @@ export function rightsIssueOrder<T extends { _id: string }>(players: T[], actorI
     return [...players.slice(start), ...players.slice(0, start)];
 }
 
-export function rightsPurchaseError(quantity: number, maximum: number, cash: number, pack?: Pack)
+export function rightsPurchaseError(quantity: number, maximum: number, cash: number, pack?: Pack, price = rightsIssuePrice)
 {
     if (!Number.isSafeInteger(quantity) || quantity < 0)
     {
@@ -47,7 +52,7 @@ export function rightsPurchaseError(quantity: number, maximum: number, cash: num
         return "Enter a positive number of shares in steps of 1,000.";
     }
 
-    return quantity * rightsIssuePrice > cash ? "You don't have enough cash. Try fewer shares." : "";
+    return quantity * price > cash ? "You don't have enough cash. Try fewer shares." : "";
 }
 
 export { sharesAvailable as rightsAvailable } from "./rules";

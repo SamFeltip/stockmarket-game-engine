@@ -1,6 +1,6 @@
 import type { MutationContext, Document_ } from "./model";
 import { members } from "./library";
-import { rightsAvailable } from "../shared/rights-issue";
+import { rightsAvailable, rightsPriceFor } from "../shared/rights-issue";
 import { chooseNpcAction } from "../packages/npc-engine/src/runtime";
 
 export async function advanceNpcRights(context: MutationContext, game: Document_<"games">,
@@ -27,7 +27,7 @@ export async function advanceNpcRights(context: MutationContext, game: Document_
 
         const available = rightsAvailable(await members(context, game._id), issue.stockKey);
         const { action } = chooseNpcAction({ phase: "rights", price, maximum: offer.maximum,
-            cash: player.cash, available });
+            cash: player.cash, available, issuePrice: rightsPriceFor(game.pack, price) });
 
         game = await purchase(context, game, action.quantity);
     }

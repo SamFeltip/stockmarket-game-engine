@@ -1,5 +1,5 @@
 import { stockCatalog } from "../catalog";
-import { specialDeck, type DeckCard } from "../shared/chance-cards";
+import { cashStock, specialDeck, type DeckCard } from "../shared/chance-cards";
 import { withRoleBonuses, type CompanyRole } from "../shared/company-roles";
 import { packLengths, type Pack } from "../shared/packs";
 import { startingCash } from "../shared/rules";
@@ -50,12 +50,12 @@ export async function packStocks(context: QueryContext, pack?: Pack, techStart?:
     {
         if (techStart === undefined)
         {
-            return techStocks;
+            return [...techStocks, cashStock];
         }
 
         const quotes = techPrices(techStart, 0);
 
-        return techStocks.map((stock, index) => ({ ...stock, startingValue: quotes[index].value }));
+        return [...techStocks.map((stock, index) => ({ ...stock, startingValue: quotes[index].value })), cashStock];
     }
 
     const stocks = await context.db.query("stocks").collect();
@@ -82,7 +82,7 @@ export function settlementInsights(game: Document_<"games">, insights: Document_
     players: Document_<"players">[], stocks: Awaited<ReturnType<typeof gameStocks>>): SettlementCard[]
 {
     const tech = game.pack === "tech";
-    const effective = tech ? [] : withRoleBonuses(insights, players, stocks);
+    const effective = tech ? insights.filter((card) => !card.forecast) : withRoleBonuses(insights, players, stocks);
     const crash = game.pack === "crashing" && (game.currentPeriod + 1) % 3 === 0;
     if (!tech && !crash)
     {

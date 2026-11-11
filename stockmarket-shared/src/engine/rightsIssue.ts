@@ -4,7 +4,7 @@ import { members, fail, feedItem } from "./library";
 import { isCurrent } from "./seats";
 import { finishTurn } from "./commands";
 import { publicIdentity } from "./identity";
-import { rightsMaximum, rightsIssueOrder, rightsIssuePrice, rightsPurchaseError, rightsAvailable } from "../shared/rights-issue";
+import { rightsMaximum, rightsIssueOrder, rightsPriceFor, rightsPurchaseError, rightsAvailable } from "../shared/rights-issue";
 import { companyRoles, roleQualification } from "../shared/company-roles";
 import { advanceNpcRights } from "./npcRights";
 import { chanceStockKey } from "../shared/chance-cards";
@@ -88,7 +88,9 @@ export async function purchase(context: MutationContext, game: Document_<"games"
     const issue = game.rightsIssue!;
     const offer = issue.offers[issue.index];
     const player = (await context.db.get(offer.playerId)) ?? fail("Player not found");
-    const reason = rightsPurchaseError(quantity, offer.maximum, player.cash, game.pack);
+    const marketPrice = game.prices.find((price) => price.stockKey === issue.stockKey)?.value ?? 0;
+    const unitPrice = rightsPriceFor(game.pack, marketPrice);
+    const reason = rightsPurchaseError(quantity, offer.maximum, player.cash, game.pack, unitPrice);
     if (reason)
     {
         fail(reason);
@@ -111,15 +113,15 @@ export async function purchase(context: MutationContext, game: Document_<"games"
 
         const holdings = player.holdings.map((holding) => holding.stockKey === issue.stockKey
             ? { ...holding, quantity: held + quantity } : holding);
-        const updated = { ...player, holdings, ...qualification, cash: player.cash - quantity * rightsIssuePrice };
+        const updated = { ...player, holdings, ...qualification, cash: player.cash - quantity * unitPrice };
         const roleAfter = companyRoles(seats.map((seat) => seat._id === player._id ? updated : seat), issue.stockKey)
             .find((role) => role.playerId === player._id)?.role;
 
         await context.db.patch(player._id, { holdings, ...qualification, cash: updated.cash });
-        // Record the actual £1 purchase price without creating another bargain.
+        // Record the actual purchase price without creating another bargain.
         await context.db.insert("gameActions", { gameId: game._id, period: game.currentPeriod, turn: game.turn,
             actorPlayerId: player._id, action: { kind: "buy", stockKey: issue.stockKey, quantity },
-            unitPrice: rightsIssuePrice, rightsIssueId: issue.insightId });
+            unitPrice, rightsIssueId: issue.insightId });
         await feedItem(context, game, display.name, `bought ${quantity} ${stock.name} shares in the Rights Issue`,
             display.profileRoot, "", { stockKey: issue.stockKey, quantity, roleBefore, roleAfter });
     }

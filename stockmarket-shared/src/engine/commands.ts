@@ -72,7 +72,7 @@ export async function applyTurn(
         const offer = (await debentureOffers(context, game, player)).find((item) => item.stockKey === action.stockKey);
         if (!offer || offer.unavailableReason || offer.amount === null)
         {
-            fail(offer?.unavailableReason ?? "Choose a bankrupt stock you own");
+            fail(offer?.unavailableReason ?? (game.pack === "tech" ? "Choose an eligible stock you own" : "Choose a bankrupt stock you own"));
         }
 
         const updated = { ...player, cash: player.cash + offer.amount,

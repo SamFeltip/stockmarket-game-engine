@@ -6,6 +6,16 @@ const quotes = data.quotes as [string, ...number[]][];
 const monthStarts = quotes.flatMap(([date], index) =>
     date.slice(0, 7) !== quotes[index - 1]?.[0].slice(0, 7) ? [index] : []);
 
+const volatilityOrder = data.tickers.map((_, index) =>
+{
+    const column = index + 1;
+    const returns = quotes.slice(1).map((quote, day) => Math.log(Number(quote[column]) / Number(quotes[day][column])));
+    const mean = returns.reduce((sum, value) => sum + value, 0) / returns.length;
+    const variance = returns.reduce((sum, value) => sum + (value - mean) ** 2, 0) / returns.length;
+
+    return { index, variance };
+}).sort((a, b) => a.variance - b.variance).map(({ index }) => index);
+
 export const techStocks = [
     { key: 106, name: "ASML", logo: "asml" },
     { key: 101, name: "Facebook", logo: "facebook" },
@@ -14,7 +24,7 @@ export const techStocks = [
     { key: 104, name: "Apple", logo: "apple" },
     { key: 105, name: "Netflix", logo: "netflix" },
 ].map(({ key, name, logo }, index) => ({
-    key, name, display: true, variation: index + 1, startingValue: 0,
+    key, name, display: true, variation: volatilityOrder.indexOf(index) + 1, startingValue: 0,
     imagePath: `/static/imgs/stocks/${logo}.png`,
     secondaryImagePath: `/static/imgs/stocks/${logo}_secondary.png`,
 }));

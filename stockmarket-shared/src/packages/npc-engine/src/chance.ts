@@ -9,10 +9,10 @@ export function chooseChance(observation: NpcObservation): ChanceAction | undefi
         .toSorted((a, b) => b.amount - a.amount)[0]?.action;
 }
 
-export function rightsPurchase(price: number, maximum: number, cash: number, available: number): number
+export function rightsPurchase(price: number, maximum: number, cash: number, available: number, issuePrice = rightsIssuePrice): number
 {
-    return price > rightsIssuePrice
-        ? floorTradeQuantity(Math.min(maximum, cash / rightsIssuePrice, available)) : 0;
+    return price > issuePrice
+        ? floorTradeQuantity(Math.min(maximum, cash / issuePrice, available)) : 0;
 }
 
 /** Suspension choices see the revealed settlement, never opponents' private cards during trading. */

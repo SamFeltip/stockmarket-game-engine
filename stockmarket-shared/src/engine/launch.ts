@@ -48,7 +48,7 @@ export async function launchGame(context: MutationContext, game: Document_<"game
     const catalogVersion = `${!game.pack || game.pack === "classic" ? "boardgame-108-v2" : game.pack}:${game._id}`;
     const ordinary = cards.map((card) => ({ id: String(card._id), stockKey: card.stockKey, value: card.value,
         description: card.description }));
-    const deck = game.pack === "tech" ? [] : (game.pack === "frantic" ? franticDeck(ordinary) : ordinary.concat(specialDeck()));
+    const deck = game.pack === "frantic" ? franticDeck(ordinary) : ordinary.concat(specialDeck(game.pack));
 
     await context.db.insert("gameCatalogs", { gameId: game._id, version: catalogVersion, cards: deck });
 

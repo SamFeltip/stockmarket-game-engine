@@ -7,7 +7,7 @@ import { rightsPurchase, suspensionChoice } from "./chance";
 
 type TradingInput = { readonly phase: "trading"; readonly observation: NpcObservation };
 type RightsInput = { readonly phase: "rights"; readonly price: number; readonly maximum: number;
-    readonly cash: number; readonly available: number };
+    readonly cash: number; readonly available: number; readonly issuePrice?: number };
 type SuspensionInput = { readonly phase: "suspension" | "hold-stock"; readonly holdings: readonly Holding[];
     readonly opening: readonly StockPrice[]; readonly settled: readonly StockPrice[];
     readonly suspended: readonly number[] };
@@ -32,7 +32,7 @@ export function chooseNpcAction(input: NpcActionInput, profile?: NpcProfile,
     }
     if (input.phase === "rights") {
         return { action: { kind: "rights-response",
-            quantity: rightsPurchase(input.price, input.maximum, input.cash, input.available) }, nextMemory: memory };
+            quantity: rightsPurchase(input.price, input.maximum, input.cash, input.available, input.issuePrice) }, nextMemory: memory };
     }
     return { action: { kind: input.phase === "suspension" ? "suspend" : "hold-stock",
         stockKey: suspensionChoice(input.holdings, input.opening, input.settled, input.suspended) }, nextMemory: memory };
