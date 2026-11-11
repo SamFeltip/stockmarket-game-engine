@@ -13,7 +13,7 @@ export interface Tables {
         currentUserId?: Id<"users">; currentPlayerId?: Id<"players">; npcDifficulty?: NpcProfile["difficulty"];
         rulesVersion?: number; rosterRevision?: number; catalogVersion?: string;
         periodCount: number; currentPeriod: number; turn: number;
-        pack?: Pack; techStart?: number; standardPeriodCount?: number;
+        pack?: Pack; techStart?: number; standardPeriodCount?: number; techPeriodCount?: number;
         status: "waiting" | "playing" | "closed" | "special_insights" | "finished";
         prices: Prices; priceHistory?: { period: number; prices: Prices; steps?: { stockKey: number; values: number[]; count: number }[] }[];
         suspended: number[]; suspensionPeriod?: number;

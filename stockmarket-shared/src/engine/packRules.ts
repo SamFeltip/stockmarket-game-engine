@@ -1,15 +1,15 @@
 import { stockCatalog } from "../catalog";
 import { specialDeck, type DeckCard } from "../shared/chance-cards";
 import { withRoleBonuses, type CompanyRole } from "../shared/company-roles";
-import { packRounds, type Pack } from "../shared/packs";
-import { startingCash, validGameLength } from "../shared/rules";
+import { packLengths, type Pack } from "../shared/packs";
+import { startingCash } from "../shared/rules";
 import { roundPrices } from "../shared/settlement";
 import type { Document_, Id, QueryContext } from "./model";
 import { techPrices, techStocks } from "./techMarket";
 
 export function validPackLength(pack: Pack | undefined, lastPeriod: number)
 {
-    return pack === "tech" ? lastPeriod === packRounds(pack, 0) - 1 : validGameLength(lastPeriod);
+    return packLengths(pack).includes(lastPeriod + 1);
 }
 
 export function packStartingCash(pack?: Pack)
@@ -44,10 +44,15 @@ export function franticDeck(cards: DeckCard[])
     return ordinary.concat(specialDeck("frantic"));
 }
 
-export async function packStocks(context: QueryContext, pack?: Pack, techStart = 0)
+export async function packStocks(context: QueryContext, pack?: Pack, techStart?: number)
 {
     if (pack === "tech")
     {
+        if (techStart === undefined)
+        {
+            return techStocks;
+        }
+
         const quotes = techPrices(techStart, 0);
 
         return techStocks.map((stock, index) => ({ ...stock, startingValue: quotes[index].value }));

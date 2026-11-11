@@ -1,5 +1,5 @@
 import data from "../data/tech-daily-closes.json" with { type: "json" };
-import { techMonths, techRoundsPerBlock } from "../shared/packs";
+import { techMonthsPerPeriod, techRoundsPerBlock } from "../shared/packs";
 import type { DeckCard } from "../shared/chance-cards";
 
 const quotes = data.quotes as [string, ...number[]][];
@@ -19,10 +19,10 @@ export const techStocks = [
     secondaryImagePath: `/static/imgs/stocks/${logo}_secondary.png`,
 }));
 
-export function chooseTechStart(random: number)
+export function chooseTechStart(random: number, periods: number)
 {
     // The final month in the source is partial, so it may only mark the end of a window.
-    return Math.floor(random * (monthStarts.length - techMonths));
+    return Math.floor(random * (monthStarts.length - periods * techMonthsPerPeriod));
 }
 
 function closeIndex(start: number, period: number)
@@ -34,8 +34,8 @@ function closeIndex(start: number, period: number)
 
     const block = Math.floor((period - 1) / techRoundsPerBlock);
     const step = (period - 1) % techRoundsPerBlock + 1;
-    const opening = block === 0 ? monthStarts[start] : monthStarts[start + block * 2] - 1;
-    const closing = monthStarts[start + block * 2 + 2] - 1;
+    const opening = block === 0 ? monthStarts[start] : monthStarts[start + block * techMonthsPerPeriod] - 1;
+    const closing = monthStarts[start + (block + 1) * techMonthsPerPeriod] - 1;
 
     return opening + Math.floor((closing - opening) * step / techRoundsPerBlock);
 }

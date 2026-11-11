@@ -4,6 +4,8 @@ import { minimumPlayers, maximumPlayers } from "../shared/rules";
 import { deal, fail, feedItem, members, seedCatalog } from "./library";
 import { spectatorHost } from "./hosting";
 import { franticDeck, gameStocks, validPackLength } from "./packRules";
+import { packPeriods } from "../shared/packs";
+import { chooseTechStart, techPrices } from "./techMarket";
 
 export async function launchGame(context: MutationContext, game: Document_<"games">, allowNpcs = true)
 {
@@ -18,7 +20,8 @@ export async function launchGame(context: MutationContext, game: Document_<"game
         fail("At least four players are required");
     }
 
-    if (!validPackLength(game.pack, game.periodCount))
+    const periods = packPeriods(game.pack, game.periodCount + 1);
+    if (!validPackLength(game.pack, periods - 1))
     {
         fail("Invalid game length");
     }
@@ -55,8 +58,17 @@ export async function launchGame(context: MutationContext, game: Document_<"game
             controller: seat.controller ?? { kind: "human", userId: seat.userId! } });
     }
 
-    await deal(context, game, players);
-    await context.db.patch(game._id, { status: "playing", currentPlayerId: players[0]._id,
+    let market;
+    if (game.pack === "tech")
+    {
+        const techStart = chooseTechStart(context.random(), periods);
+        const prices = techPrices(techStart, 0);
+
+        market = { techStart, prices, priceHistory: [{ period: 0, prices }] };
+    }
+
+    await deal(context, { ...game, ...market }, players);
+    await context.db.patch(game._id, { ...market, status: "playing", currentPlayerId: players[0]._id,
         currentUserId: players[0].userId, rulesVersion: 2, catalogVersion });
     await feedItem(context, game, "game started", "game started", "/static/imgs/icons/Handshake.svg", "grey");
     await context.effects.enqueueNextNpc(game._id);

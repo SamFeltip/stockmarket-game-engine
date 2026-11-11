@@ -4,6 +4,7 @@ import { roundCash, roundPrices, roundPriceSteps } from "../shared/settlement";
 import { deal, fail, feedItem, members, roundInsights } from "./library";
 
 import { publicSeats } from "./legalActions";
+import { packPeriods, roundWithinPeriod } from "../shared/packs";
 import { pendingSuspensions } from "../shared/suspensions";
 
 export async function advancePeriod(context: MutationContext, game: Document_<"games">, expectedPeriod: number)
@@ -59,7 +60,10 @@ export async function advancePeriod(context: MutationContext, game: Document_<"g
     if (!finished)
     {
         await deal(context, { ...game, currentPeriod }, players);
-        await feedItem(context, { ...game, currentPeriod }, `Period ${currentPeriod + 1}`,
+        const period = packPeriods(game.pack, currentPeriod + 1);
+        const title = game.pack === "tech" ? `Period ${period} · Round ${roundWithinPeriod(currentPeriod)}` : `Period ${period}`;
+
+        await feedItem(context, { ...game, currentPeriod }, title,
             "Players get another turn", "/static/imgs/icons/Stock.svg", "grey");
         await context.effects.enqueueNextNpc(game._id);
     }
