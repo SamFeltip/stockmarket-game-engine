@@ -50,14 +50,29 @@ function closeIndex(start: number, period: number)
     return opening + Math.floor((closing - opening) * step / techRoundsPerBlock);
 }
 
-export function techPrices(start: number, period: number)
+function quotePrices(quote: (typeof quotes)[number])
 {
-    const quote = quotes[closeIndex(start, period)];
-
     return techStocks.map((stock, index) => ({ stockKey: stock.key, value: Number(quote[index + 1]) }));
 }
 
+export function techPrices(start: number, period: number)
+{
+    return quotePrices(quotes[closeIndex(start, period)]);
+}
+
 const formatDate = new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", timeZone: "UTC" });
+
+export function techRoundCloses(start: number, period: number)
+{
+    const opening = closeIndex(start, period);
+    const closing = closeIndex(start, period + 1);
+
+    return quotes.slice(opening + 1, closing + 1).map((quote) => ({
+        date: quote[0],
+        label: formatDate.format(new Date(quote[0])),
+        prices: quotePrices(quote),
+    }));
+}
 
 export function techForecasts(start: number, period: number): DeckCard[][]
 {

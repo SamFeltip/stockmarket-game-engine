@@ -5,7 +5,7 @@ import { packLengths, type Pack } from "../shared/packs";
 import { startingCash } from "../shared/rules";
 import { roundPrices } from "../shared/settlement";
 import type { Document_, Id, QueryContext } from "./model";
-import { techPrices, techStocks } from "./techMarket";
+import { techPrices, techRoundCloses, techStocks } from "./techMarket";
 
 export function validPackLength(pack: Pack | undefined, lastPeriod: number)
 {
@@ -89,20 +89,32 @@ export function settlementInsights(game: Document_<"games">, insights: Document_
         return effective;
     }
 
-    const prices = tech ? techPrices(game.techStart!, game.currentPeriod + 1)
-        : roundPrices(game.prices, effective, stocks, game.suspended);
-    const events = prices.map(({ stockKey, value }) =>
+    function marketCard(stockKey: number, value: number, description: string, date?: string): SettlementCard
     {
-        const opening = game.prices.find((price) => price.stockKey === stockKey)!.value;
+        const id = `market:${game.currentPeriod}:${stockKey}${date ? `:${date}` : ""}`;
 
-        return {
-            _id: `market:${game.currentPeriod}:${stockKey}` as Id<"playerInsights">,
-            _creationTime: 0, gameId: game._id, playerId: players[0]._id,
-            period: game.currentPeriod, stockKey, resolved: true,
-            value: tech ? Math.round((value - opening) * 100) / 100 : -(Math.round(value * 30) / 100),
-            description: tech ? "Historical market close" : "Market crash · 30% drop",
-        };
-    });
+        return { _id: id as Id<"playerInsights">, _creationTime: 0, gameId: game._id, playerId: players[0]._id,
+            period: game.currentPeriod, stockKey, resolved: true, value, description };
+    }
 
-    return effective.concat(events);
+    if (tech)
+    {
+        const previous = new Map(game.prices.map(({ stockKey, value }) => [stockKey, value]));
+        const events = techRoundCloses(game.techStart!, game.currentPeriod).flatMap(({ date, label, prices }) =>
+            prices.map(({ stockKey, value }) =>
+            {
+                const change = Math.round((value - previous.get(stockKey)!) * 100) / 100;
+
+                previous.set(stockKey, value);
+
+                return marketCard(stockKey, change, `Historical close · ${label}`, date);
+            }));
+
+        return effective.concat(events);
+    }
+
+    const prices = roundPrices(game.prices, effective, stocks, game.suspended);
+
+    return effective.concat(prices.map(({ stockKey, value }) =>
+        marketCard(stockKey, -(Math.round(value * 30) / 100), "Market crash · 30% drop")));
 }
