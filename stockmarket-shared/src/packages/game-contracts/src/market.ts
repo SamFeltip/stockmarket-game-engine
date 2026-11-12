@@ -1,10 +1,7 @@
-import { sharesAvailable, sharesPerCompany, validTradeQuantity } from "../../../shared/rules";
+import { roundMoney, sharesAvailable, sharesPerCompany, validTradeQuantity } from "../../../shared/rules";
 import type { Action, Market } from "./index";
 
-export function money(value: number): number
-{
-    return Math.round(value * 100) / 100;
-}
+export { roundMoney as money };
 
 export function tradeError(market: Market, action: Action): string | undefined
 {
@@ -32,7 +29,7 @@ export function tradeError(market: Market, action: Action): string | undefined
     }
 
     const signed = action.kind === "buy" ? action.quantity : -action.quantity;
-    const cost = money(signed * price);
+    const cost = roundMoney(signed * price);
     if (!Number.isFinite(cost))
     {
         return "This stock cannot be traded";
@@ -48,7 +45,7 @@ export function tradeError(market: Market, action: Action): string | undefined
         return "Not enough shares to sell";
     }
 
-    if (self.cash < cost)
+    if (action.kind === "buy" && (!Number.isFinite(self.cash) || self.cash < cost))
     {
         return "Not enough cash";
     }
@@ -76,7 +73,7 @@ export function transition(market: Market, action: Action): Market
             seat.id === market.selfId
                 ? {
                     ...seat,
-                    cash: money(seat.cash - money(signed * price)),
+                    cash: roundMoney(seat.cash - roundMoney(signed * price)),
                     holdings: seat.holdings.map((holding) =>
                         holding.stockKey === action.stockKey
                             ? { ...holding, quantity: holding.quantity + signed }

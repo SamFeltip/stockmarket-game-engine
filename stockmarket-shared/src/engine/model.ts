@@ -1,5 +1,7 @@
 import type { Action, NpcProfile } from "../packages/game-contracts/src";
 import type { ChanceKind, DeckCard } from "../shared/chance-cards";
+import type { TradingSuspension } from "../shared/suspensions";
+import type { Pack } from "../shared/packs";
 import type { CompanyRole } from "../shared/company-roles";
 
 // Platform-neutral IDs are structurally compatible with the live persistence adapter.
@@ -12,9 +14,12 @@ export interface Tables {
         currentUserId?: Id<"users">; currentPlayerId?: Id<"players">; npcDifficulty?: NpcProfile["difficulty"];
         rulesVersion?: number; rosterRevision?: number; catalogVersion?: string;
         periodCount: number; currentPeriod: number; turn: number;
+        pack?: Pack; techStart?: number; standardPeriodCount?: number; techPeriodCount?: number;
         status: "waiting" | "playing" | "closed" | "special_insights" | "finished";
         prices: Prices; priceHistory?: { period: number; prices: Prices; steps?: { stockKey: number; values: number[]; count: number }[] }[];
         suspended: number[]; suspensionPeriod?: number;
+        targetedSuspensions?: { stockKey: number; playerIds: Id<"players">[] }[];
+        tradingSuspensions?: TradingSuspension<Id<"players">>[];
         rightsIssue?: {
             insightId: Id<"playerInsights">; stockKey: number; actorPlayerId: Id<"players">;
             period: number; turn: number; index: number; completed?: boolean;
@@ -33,7 +38,8 @@ export interface Tables {
         secondaryImagePath: string; variation: number; display: boolean };
     insights: { key: number; stockKey: number; description: string; value: number };
     playerInsights: { gameId: Id<"games">; playerId: Id<"players">; period: number; stockKey: number;
-        description: string; value: number; resolved: boolean; used?: boolean; catalogCardId?: string; chanceKind?: ChanceKind };
+        description: string; value: number; resolved: boolean; used?: boolean; catalogCardId?: string; chanceKind?: ChanceKind;
+        debentureRule?: DeckCard["debentureRule"]; forecast?: DeckCard["forecast"] };
     gameCatalogs: { gameId: Id<"games">; version: string; cards: DeckCard[] };
     gameActions: { gameId: Id<"games">; period: number; turn: number; actorPlayerId: Id<"players">;
         action: Action | { kind: "government-loan"; insightId: Id<"playerInsights"> }
@@ -41,7 +47,7 @@ export interface Tables {
         unitPrice?: number; rightsIssueId?: Id<"playerInsights"> };
     periodSummaries: { gameId: Id<"games">; period: number; opening: Prices; settled: Prices };
     feed: { gameId: Id<"games">; period: number; title: string; message: string; imageRoot: string; colour: string;
-        debenturePayout?: number; cashBonus?: number; stockKey?: number; quantity?: number;
+        debenturePayout?: number; redemptionName?: string; cashBonus?: number; stockKey?: number; quantity?: number;
         roleBefore?: CompanyRole; roleAfter?: CompanyRole };
 }
 export type Table = keyof Tables;

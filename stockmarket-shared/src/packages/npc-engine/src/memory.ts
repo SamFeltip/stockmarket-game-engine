@@ -151,7 +151,7 @@ export function behaviour(
     const values = observation.catalog.map((card) => (card.stockKey === stockKey ? card.value : 0));
     const scale = Math.sqrt(
         (values.reduce((sum, value) => sum + value * value, 0) / Math.max(1, values.length))
-        * 10
+        * (observation.opponentDrawSize ?? 10)
         * (observation.players.length - 1),
     );
     let weighted = 0;

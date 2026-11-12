@@ -1,6 +1,5 @@
 import type { ChanceAction, NpcObservation, StockPrice, Holding } from "../../game-contracts/src";
-import { floorTradeQuantity } from "../../../shared/rules";
-import { rightsIssuePrice } from "../../../shared/rights-issue";
+import { maxRightsPurchase, rightsIssuePrice } from "../../../shared/rights-issue";
 
 /** Card offers are validated by the game; strategy chooses the greatest immediate benefit. */
 export function chooseChance(observation: NpcObservation): ChanceAction | undefined
@@ -9,10 +8,10 @@ export function chooseChance(observation: NpcObservation): ChanceAction | undefi
         .toSorted((a, b) => b.amount - a.amount)[0]?.action;
 }
 
-export function rightsPurchase(price: number, maximum: number, cash: number, available: number): number
+export function rightsPurchase(price: number, maximum: number, cash: number, available: number, issuePrice = rightsIssuePrice): number
 {
-    return price > rightsIssuePrice
-        ? floorTradeQuantity(Math.min(maximum, cash / rightsIssuePrice, available)) : 0;
+    return price > issuePrice
+        ? maxRightsPurchase(maximum, cash, available, issuePrice) : 0;
 }
 
 /** Suspension choices see the revealed settlement, never opponents' private cards during trading. */

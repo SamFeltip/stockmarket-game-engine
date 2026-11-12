@@ -1,12 +1,17 @@
 import { cashStockKey } from "./chance-cards";
 
 interface Price { stockKey: number; value: number }
-interface Insight { stockKey: number; playerId: string; value: number }
+interface Insight { stockKey: number; playerId: string; value: number; forecast?: unknown; marketSteps?: number[] }
 interface Stock { key: number; display: boolean; name: string }
 
 export function settledPrice(opening: number, change: number): number
 {
     return Math.max(0, Math.round((opening + change) * 100) / 100);
+}
+
+export function sumInsightChanges(insights: Insight[])
+{
+    return insights.reduce((sum, insight) => sum + (insight.forecast ? 0 : insight.value), 0);
 }
 
 export function roundPrices(prices: Price[], insights: Insight[], stocks: Stock[], suspended: number[])
@@ -15,8 +20,7 @@ export function roundPrices(prices: Price[], insights: Insight[], stocks: Stock[
     {
         const stock = stocks.find((item) => item.key === price.stockKey);
         const change = stock?.display && !suspended.includes(price.stockKey)
-            ? insights.filter((insight) => insight.stockKey === price.stockKey)
-                .reduce((sum, insight) => sum + insight.value, 0) : 0;
+            ? sumInsightChanges(insights.filter((insight) => insight.stockKey === price.stockKey)) : 0;
 
         return { ...price, value: settledPrice(price.value, change) };
     });
@@ -32,13 +36,16 @@ export function roundPriceSteps(prices: Price[], insights: Insight[], stocks: St
         .map((price) =>
         {
             let change = 0;
-            const cards = insights.filter((card) => card.stockKey === price.stockKey);
-            const count = allInsights.filter((card) => card.stockKey === price.stockKey).length;
-            const values = cards.map((card) =>
+            const held = suspended.includes(price.stockKey);
+            const cards = insights.filter((card) => card.stockKey === price.stockKey && !card.forecast);
+            const count = allInsights.filter((card) => card.stockKey === price.stockKey && !card.forecast)
+                .reduce((total, card) => total + (card.marketSteps?.length ?? 1), 0);
+            const values = cards.flatMap((card) =>
             {
                 change += card.value;
 
-                return settledPrice(price.value, suspended.includes(price.stockKey) ? 0 : change);
+                return card.marketSteps?.map((close) => held ? price.value : close)
+                    ?? [settledPrice(price.value, held ? 0 : change)];
             });
 
             return { stockKey: price.stockKey, values, count };
@@ -47,6 +54,11 @@ export function roundPriceSteps(prices: Price[], insights: Insight[], stocks: St
 
 export function roundCash(player: { _id: string; cash: number }, insights: Insight[], stocks: Stock[])
 {
+    if (player.cash < 0)
+    {
+        return player.cash;
+    }
+
     const change = insights.filter((insight) => insight.playerId === player._id
       && stocks.some((stock) => stock.key === insight.stockKey && stock.name === "currency"))
         .reduce((sum, insight) => sum + insight.value, 0);

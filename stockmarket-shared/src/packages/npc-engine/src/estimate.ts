@@ -20,7 +20,7 @@ export function estimate(observation: NpcObservation, hard: boolean, seed: strin
 {
     const ownIds = new Set(observation.ownInsights.map((card) => card.id));
     const pool = observation.catalog.filter((card) => !ownIds.has(card.id));
-    const unseen = 10 * (observation.players.length - 1);
+    const unseen = (observation.opponentDrawSize ?? 10) * (observation.players.length - 1);
     if (hard && unseen > pool.length)
     {
         throw new Error("Catalog cannot supply unseen hands");
