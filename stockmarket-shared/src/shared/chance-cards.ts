@@ -67,7 +67,7 @@ export interface DeckCard {
 const retailSpecialCards = { cashPercents: [10, -10], cashCopies: 4, chanceCopies: 2, cashCard: "loan", stockCard: "debenture", debentureRule: "bankruptcy" } as const;
 const specialCardsByPack = {
     classic: retailSpecialCards,
-    frantic: { ...retailSpecialCards, cashPercents: [50, -15], cashCopies: 6, chanceCopies: 5, cashCard: "print-money",
+    frantic: { ...retailSpecialCards, cashPercents: [50, -30], cashCopies: 6, chanceCopies: 5, cashCard: "print-money",
         stockCard: "bankruptcy-buyout", debentureRule: "fixed-bankruptcy" },
     tech: { ...retailSpecialCards, cashPercents: [2, -2], debentureRule: "price-drop" },
 } satisfies Record<Pack, { cashPercents: readonly number[]; cashCopies: number; chanceCopies: number; cashCard: "loan" | "print-money"; stockCard: "debenture" | "bankruptcy-buyout"; debentureRule: DebentureRule }>;

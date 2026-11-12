@@ -45,8 +45,8 @@ export async function advanceNpcSuspensions(context: MutationContext, game: Docu
         }) : undefined)
         : chooseNpcAction({ phase: "suspension", holdings: owner.holdings,
             opening: visible, settled: prices, suspended: game.suspended }).action;
-    const updated = await spendSuspension(context, game, card, choice?.stockKey,
-        choice && "playerIds" in choice ? choice.playerIds : undefined);
+    const updated = await spendSuspension(context, game, card._id, choice?.stockKey,
+        choice && "playerIds" in choice ? choice.playerIds : undefined, owner._id);
 
     await advanceNpcSuspensions(context, updated);
 }

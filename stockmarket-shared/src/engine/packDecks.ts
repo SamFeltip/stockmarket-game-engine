@@ -17,7 +17,7 @@ const franticGains: Partial<Record<number, readonly number[]>> = {
     11: [6.40, 12.82, 19.22, 25.64, 32.04],
     12: [9.30, 18.58, 27.88, 37.18, 46.48, 55.76],
 };
-// Keep the existing negative deck while increasing gains.
+// Use the original downside totals to determine how many extra loss cards to add.
 const franticDownside: Partial<Record<number, number>> = { 7: 191, 8: 12, 9: 18, 10: 43, 11: 94, 12: 191 };
 
 function franticStockDeck(catalog: DeckCard[], stock: typeof stockCatalog[number])
@@ -60,10 +60,11 @@ function franticStockDeck(catalog: DeckCard[], stock: typeof stockCatalog[number
         }
     }
 
-    const cards = [...base, ...extra];
+    // UB's previous Frantic losses already had an additional 2× multiplier.
+    const lossMultiplier = stock.key === 8 ? 2 * 3 : 2;
 
-    // Increase UB losses without changing how often those cards are drawn.
-    return stock.key === 8 ? cards.map((card) => card.value < 0 ? cardWithValue(card.id, card.value * 2) : card) : cards;
+    return [...base, ...extra].map((card) =>
+        card.value < 0 ? cardWithValue(card.id, card.value * lossMultiplier) : card);
 }
 
 function retailStockCards(): DeckCard[]
@@ -159,7 +160,7 @@ const decks: Record<Pack, PackDeck> = {
     frantic: {
         stockCards: franticStockCards,
         deal: (context, _game, deck, seats) => dealFranticHands(context, deck, seats),
-        catalogVersion: "frantic-downside-v4",
+        catalogVersion: "frantic-downside-v5",
         opponentDrawSize: (handSize) => handSize,
     },
     tech: {

@@ -43,7 +43,7 @@ export interface TradingSuspension<PlayerId extends string = string> {
 interface Quote { stockKey: number; value: number }
 interface TradingMarket { prices: Quote[]; tradingSuspensions?: readonly TradingSuspension[] }
 
-/** Only shareholders who were unticked at settlement are exempt. Later purchases don't change eligibility. */
+/** Only shareholders selected at settlement get the frozen quote for the next period. */
 export function nextTradingSuspensions<PlayerId extends string>(game: {
     prices: Quote[]; targetedSuspensions?: readonly TargetedSuspension[]; currentPeriod: number; periodCount: number;
 }, players: readonly (Stockholder & { _id: PlayerId })[])
@@ -56,10 +56,12 @@ export function nextTradingSuspensions<PlayerId extends string>(game: {
     return (game.targetedSuspensions ?? []).flatMap(({ stockKey, playerIds }) =>
     {
         const quote = game.prices.find((price) => price.stockKey === stockKey);
-        const excludedPlayerIds = stockholders(players, stockKey).filter((player) => !playerIds.includes(player._id))
+        const targets = new Set(stockholders(players, stockKey)
+            .filter((player) => playerIds.includes(player._id)).map((player) => player._id));
+        const excludedPlayerIds = players.filter((player) => !targets.has(player._id))
             .map((player) => player._id);
 
-        return quote ? [{ ...quote, excludedPlayerIds }] : [];
+        return quote && targets.size > 0 ? [{ ...quote, excludedPlayerIds }] : [];
     });
 }
 

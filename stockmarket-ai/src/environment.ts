@@ -6,7 +6,7 @@ import { launchGame } from "../../stockmarket-shared/src/engine/launch";
 import { applyTurn } from "../../stockmarket-shared/src/engine/commands";
 import { advancePeriod } from "../../stockmarket-shared/src/engine/advancePeriod";
 import { activateRightsIssue, currentOffer, purchase, finishRights } from "../../stockmarket-shared/src/engine/rightsIssue";
-import { currentSuspension, holdStock } from "../../stockmarket-shared/src/engine/rounds";
+import { holdStock } from "../../stockmarket-shared/src/engine/rounds";
 import { spendSuspension } from "../../stockmarket-shared/src/engine/suspensions";
 import { buildNpcObservation } from "../../stockmarket-shared/src/engine/observation";
 import { publicSeats } from "../../stockmarket-shared/src/engine/legalActions";
@@ -191,8 +191,7 @@ export class GameEnvironment {
             } else if (decision.phase === "suspension" && action.kind === "suspend") {
                 const insights = await roundInsights(this.runtime, game);
                 const card = pendingSuspensions(game.currentPeriod, await members(this.runtime, this.gameId), insights)[0];
-                await currentSuspension(this.runtime, game, card._id);
-                await spendSuspension(this.runtime, game, card, action.stockKey);
+                await spendSuspension(this.runtime, game, card._id, action.stockKey, undefined, player._id);
             } else if (decision.phase === "hold-stock" && action.kind === "hold-stock") {
                 const insights = await roundInsights(this.runtime, game);
                 const stocks = await this.store.query("stocks").collect();

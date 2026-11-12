@@ -1,9 +1,10 @@
 import { gameStocks } from "./packRules";
-import type { MutationContext, Document_ } from "./model";
+import type { MutationContext, Document_, Id } from "./model";
 import { fail, feedItem, members } from "./library";
 import { publicIdentity } from "./identity";
 import { rulesForPack } from "../shared/packs";
 import { hasTargetedSuspension, stockholders } from "../shared/suspensions";
+import { currentSuspension } from "./rounds";
 
 export function checkSuspensionPhase(game: Document_<"games">, expectedPeriod: number)
 {
@@ -14,8 +15,15 @@ export function checkSuspensionPhase(game: Document_<"games">, expectedPeriod: n
 }
 
 export async function spendSuspension(context: MutationContext, game: Document_<"games">,
-    card: Document_<"playerInsights">, stockKey?: number, playerIds?: readonly string[])
+    insightId: Id<"playerInsights">, stockKey?: number, playerIds?: readonly string[], actorId?: Id<"players">)
 {
+    checkSuspensionPhase(game, game.currentPeriod);
+    const card = await currentSuspension(context, game, insightId);
+    if (actorId !== undefined && card.playerId !== actorId)
+    {
+        fail("Wait for your Share Suspended card");
+    }
+
     const stocks = await gameStocks(context, game);
     const owner = await context.db.get(card.playerId);
     if (!owner)

@@ -1,5 +1,6 @@
 import type { ChanceAction, NpcObservation, StockPrice, Holding } from "../../game-contracts/src";
 import { maxRightsPurchase, rightsIssuePrice } from "../../../shared/rights-issue";
+import { sharesHeld, stockholders } from "../../../shared/suspensions";
 
 /** Card offers are validated by the game; strategy chooses the greatest immediate benefit. */
 export function chooseChance(observation: NpcObservation): ChanceAction | undefined
@@ -44,9 +45,9 @@ export function targetedSuspensionChoice<Id extends string>(input: {
 
         const change = (input.settled.find((item) => item.stockKey === price.stockKey)?.value ?? price.value) - price.value;
         const alreadyTargeted = input.targeted?.find((item) => item.stockKey === price.stockKey)?.playerIds;
-        const targets = input.players.flatMap((player) =>
+        const targets = stockholders(input.players, price.stockKey).flatMap((player) =>
         {
-            const quantity = player.holdings.find((holding) => holding.stockKey === price.stockKey)?.quantity ?? 0;
+            const quantity = sharesHeld(player, price.stockKey);
             const benefit = quantity * change * (player.id === input.selfId ? -1 : 1);
 
             return benefit > 0 && !alreadyTargeted?.includes(player.id) ? [{ id: player.id, benefit }] : [];
