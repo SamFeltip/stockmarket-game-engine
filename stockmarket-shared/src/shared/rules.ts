@@ -36,4 +36,30 @@ export function floorTradeQuantity(quantity: number)
     return Math.floor(quantity / 1000) * 1000;
 }
 
+export function roundMoney(amount: number)
+{
+    return Math.round(amount * 100) / 100;
+}
+
+export function sharesForCash(cash: number, price: number)
+{
+    if (!Number.isFinite(cash) || !Number.isFinite(price) || cash <= 0 || price <= 0)
+    {
+        return 0;
+    }
+
+    const quantity = floorTradeQuantity(cash / price);
+    const nextLot = quantity + 1000;
+
+    return roundMoney(nextLot * price) <= cash ? nextLot : quantity;
+}
+
 export const maximumPlayers = 6;
+
+export function inStockOrder<T extends { stockKey: number }>(items: readonly T[], stocks: readonly { key: number }[])
+{
+    const position = new Map(stocks.map(({ key }, index) => [key, index]));
+
+    return [...items].sort((a, b) =>
+        (position.get(a.stockKey) ?? stocks.length) - (position.get(b.stockKey) ?? stocks.length));
+}

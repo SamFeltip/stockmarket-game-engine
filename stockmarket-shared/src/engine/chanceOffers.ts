@@ -1,4 +1,4 @@
-import type { ChanceOffer } from "../packages/game-contracts/src";
+import type { ChanceOffer, StockPrice } from "../packages/game-contracts/src";
 import type { QueryContext, Document_ } from "./model";
 import { chanceStockKey, loanAmount } from "../shared/chance-cards";
 import { rightsAvailable, rightsMaximum, rightsPriceFor } from "../shared/rights-issue";
@@ -8,7 +8,7 @@ import { debentureOffers } from "./debenture";
 import { playerPeriodInsights, retainedDebentures } from "./dealing";
 
 export async function chanceOffers(context: QueryContext, game: Document_<"games">,
-    self: Document_<"players">, players: Document_<"players">[]): Promise<ChanceOffer[]>
+    self: Document_<"players">, players: Document_<"players">[], prices: readonly StockPrice[]): Promise<ChanceOffer[]>
 {
     const cards = (await retainedDebentures(context, game, self._id))
         .concat(await playerPeriodInsights(context, self._id, game.currentPeriod));
@@ -32,7 +32,7 @@ export async function chanceOffers(context: QueryContext, game: Document_<"games
         }
         else if (card.period === game.currentPeriod && card.chanceKind === "rights" && !card.resolved)
         {
-            for (const price of game.prices)
+            for (const price of prices)
             {
                 const maximum = rightsMaximum(self.holdings.find((item) => item.stockKey === price.stockKey)
                     ?.quantity ?? 0, game.pack, true);

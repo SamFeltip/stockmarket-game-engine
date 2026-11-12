@@ -3,7 +3,7 @@ import { gameLengths } from "./rules";
 export const packIds = ["classic", "frantic", "tech", "crashing"] as const;
 export type Pack = typeof packIds[number];
 
-export const techRoundsPerBlock = 12;
+export const techMarketSteps = 12;
 export const techMonthsPerPeriod = 2;
 export const techDefaultPeriods = 12;
 const techLengths = Array.from({ length: 15 }, (_, index) => index + 4);
@@ -18,27 +18,25 @@ export function packDefaultPeriods(pack?: Pack)
     return pack === "tech" ? techDefaultPeriods : gameLengths[0];
 }
 
-export function packRoundsPerPeriod(pack?: Pack)
+type GameLength = { pack?: Pack; periodCount: number };
+
+export function legacyTechRounds(game: GameLength)
 {
-    return pack === "tech" ? techRoundsPerBlock : 1;
+    // Older saves stored at least 48 rounds. New Tech games store at most 18 periods.
+    return game.pack === "tech" && game.periodCount + 1 >= techLengths[0] * techMarketSteps;
 }
 
-export function packRounds(pack: Pack | undefined, periods: number)
+export function gamePeriodCount(game: GameLength)
 {
-    return periods * packRoundsPerPeriod(pack);
+    return gamePeriodNumber(game, game.periodCount);
 }
 
-export function packPeriods(pack: Pack | undefined, rounds: number)
+export function gamePeriodNumber(game: GameLength, period: number)
 {
-    return Math.ceil(rounds / packRoundsPerPeriod(pack));
+    return legacyTechRounds(game) ? Math.floor(period / techMarketSteps) + 1 : period + 1;
 }
 
-export function roundWithinPeriod(pack: Pack | undefined, round: number)
+export function techMarketStep(game: GameLength & { currentPeriod: number })
 {
-    return round % packRoundsPerPeriod(pack) + 1;
-}
-
-export function forecastPeriod(period: number)
-{
-    return period - period % techRoundsPerBlock;
+    return legacyTechRounds(game) ? game.currentPeriod : game.currentPeriod * techMarketSteps;
 }

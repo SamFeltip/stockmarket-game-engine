@@ -6,6 +6,7 @@ import { members } from "./library";
 import { playerPeriodInsights, privateForecasts } from "./dealing";
 import { publicSeats } from "./legalActions";
 import { chanceOffers } from "./chanceOffers";
+import { legacyTechRounds } from "../shared/packs";
 export async function buildNpcObservation(
     context: QueryContext,
     game: Document_<"games">,
@@ -40,22 +41,26 @@ export async function buildNpcObservation(
         prices: game.prices.filter((price) => stocks.some((stock) => stock.key === price.stockKey)),
     };
     const actionsRemaining = Math.max(1, 3 - Math.floor(game.turn / players.length)) as 1 | 2 | 3;
+    const legacyRounds = legacyTechRounds(game);
+    const ownInsights = hand.filter((card) => !card.forecast || !legacyRounds
+        || (card.forecast.from <= game.currentPeriod && game.currentPeriod < card.forecast.to)).map((card) => ({
+        id: card.catalogCardId ?? String(card._id),
+        stockKey: card.stockKey,
+        // Multiple forecasts are observations of the same market. Average their signals.
+        value: card.forecast ? card.value / (legacyRounds ? card.forecast.to - card.forecast.from
+            : hand.filter((forecast) => forecast.forecast && forecast.stockKey === card.stockKey).length) : card.value,
+    }));
 
     return {
         ...market,
         ...(game.pack === "tech" ? { opponentDrawSize: 0 }
             : game.pack === "frantic" ? { opponentDrawSize: 12 } : {}),
-        chanceOffers: await chanceOffers(context, game, self, players),
+        chanceOffers: await chanceOffers(context, game, self, players, market.prices),
         period: game.currentPeriod,
         finalPeriod: game.periodCount,
         turn: game.turn,
         actionsRemaining,
-        ownInsights: hand.filter((card) => !card.forecast || (card.forecast.from <= game.currentPeriod
-          && game.currentPeriod < card.forecast.to)).map((card) => ({
-            id: card.catalogCardId ?? String(card._id),
-            stockKey: card.stockKey,
-            value: card.forecast ? card.value / (card.forecast.to - card.forecast.from) : card.value,
-        })),
+        ownInsights,
         catalog: catalog.cards.map(({ id, stockKey, value }) => ({ id, stockKey, value })),
         events: events.filter((event) => !event.rightsIssueId).map(({ period, turn, actorPlayerId, action }) => ({
             period,

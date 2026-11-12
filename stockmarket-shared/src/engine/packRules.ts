@@ -1,11 +1,11 @@
 import { stockCatalog } from "../catalog";
 import { cashStock, specialDeck, type DeckCard } from "../shared/chance-cards";
 import { withRoleBonuses, type CompanyRole } from "../shared/company-roles";
-import { packLengths, type Pack } from "../shared/packs";
+import { legacyTechRounds, packLengths, type Pack } from "../shared/packs";
 import { startingCash } from "../shared/rules";
 import { roundPrices } from "../shared/settlement";
 import type { Document_, Id, QueryContext } from "./model";
-import { techPrices, techRoundCloses, techStocks } from "./techMarket";
+import { techForecastDescription, techPeriodCloses, techPrices, techStocks } from "./techMarket";
 
 export function validPackLength(pack: Pack | undefined, lastPeriod: number)
 {
@@ -70,20 +70,17 @@ export async function gameStocks(context: QueryContext, game: Document_<"games">
     return packStocks(context, game.pack, game.techStart);
 }
 
-export async function displayGameStocks(context: QueryContext, game: Document_<"games">)
+export async function displayGameStocks(context: QueryContext, game?: Pick<Document_<"games">, "pack" | "techStart">)
 {
-    const stocks = await gameStocks(context, game);
-    if (game.pack === "tech")
+    const stocks = await packStocks(context, game?.pack, game?.techStart);
+    const scored = stocks.map((stock) =>
     {
-        return stocks;
-    }
+        const classicScore = stockCatalog.find((item) => item.key === stock.key)?.variation;
 
-    return stocks.map((stock) =>
-    {
-        const position = stockCatalog.find((item) => item.key === stock.key)?.variation ?? stock.variation;
+        return game?.pack === "frantic" || classicScore === undefined ? stock : { ...stock, variation: classicScore };
+    });
 
-        return { position, stock: game.pack === "frantic" ? stock : { ...stock, variation: position } };
-    }).sort((a, b) => a.position - b.position).map(({ stock }) => stock);
+    return scored.sort((a, b) => Number(b.display) - Number(a.display) || a.variation - b.variation || a.key - b.key);
 }
 
 export async function gameStock(context: QueryContext, game: Document_<"games">, key: number)
@@ -92,7 +89,20 @@ export async function gameStock(context: QueryContext, game: Document_<"games">,
         : context.db.query("stocks").withIndex("by_key", (q) => q.eq("key", key)).unique();
 }
 
-export type SettlementCard = Document_<"playerInsights"> & { bonusRole?: CompanyRole; removedInsightId?: string };
+export type SettlementCard = Document_<"playerInsights"> & {
+    bonusRole?: CompanyRole; removedInsightId?: string; marketSteps?: number[];
+};
+
+export function revealInsights(game: Document_<"games">, insights: Document_<"playerInsights">[],
+    players: Document_<"players">[], stocks: Awaited<ReturnType<typeof gameStocks>>): SettlementCard[]
+{
+    const effective = settlementInsights(game, insights, players, stocks);
+
+    return game.pack === "tech" && !legacyTechRounds(game)
+        ? insights.filter((card) => card.forecast)
+            .map((card) => ({ ...card, description: techForecastDescription(game.techStart, card) })).concat(effective)
+        : effective;
+}
 
 export function settlementInsights(game: Document_<"games">, insights: Document_<"playerInsights">[],
     players: Document_<"players">[], stocks: Awaited<ReturnType<typeof gameStocks>>): SettlementCard[]
@@ -115,8 +125,21 @@ export function settlementInsights(game: Document_<"games">, insights: Document_
 
     if (tech)
     {
+        const closes = techPeriodCloses(game);
         const previous = new Map(game.prices.map(({ stockKey, value }) => [stockKey, value]));
-        const events = techRoundCloses(game.techStart!, game.currentPeriod).flatMap(({ date, label, prices }) =>
+        if (!legacyTechRounds(game))
+        {
+            const last = closes.at(-1)!;
+            const results = last.prices.map(({ stockKey, value }, index) => ({
+                ...marketCard(stockKey, Math.round((value - previous.get(stockKey)!) * 100) / 100,
+                    `Historical close · ${last.label}`, last.date),
+                marketSteps: closes.map(({ prices }) => prices[index].value),
+            }));
+
+            return effective.concat(results);
+        }
+
+        const events = closes.flatMap(({ date, label, prices }) =>
             prices.map(({ stockKey, value }) =>
             {
                 const change = Math.round((value - previous.get(stockKey)!) * 100) / 100;

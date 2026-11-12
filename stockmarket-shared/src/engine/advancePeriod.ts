@@ -5,7 +5,7 @@ import { roundCash, roundPrices, roundPriceSteps } from "../shared/settlement";
 import { fail, feedItem, members, roundInsights } from "./library";
 
 import { publicSeats } from "./legalActions";
-import { packPeriods, packRoundsPerPeriod, roundWithinPeriod } from "../shared/packs";
+import { gamePeriodNumber, legacyTechRounds, techMarketSteps } from "../shared/packs";
 import { pendingSuspensions } from "../shared/suspensions";
 
 export async function advancePeriod(context: MutationContext, game: Document_<"games">, expectedPeriod: number)
@@ -61,9 +61,9 @@ export async function advancePeriod(context: MutationContext, game: Document_<"g
     if (!finished)
     {
         await deal(context, { ...game, currentPeriod }, players);
-        const period = packPeriods(game.pack, currentPeriod + 1);
-        const title = packRoundsPerPeriod(game.pack) > 1
-            ? `Period ${period} · Round ${roundWithinPeriod(game.pack, currentPeriod)}` : `Period ${period}`;
+        const period = gamePeriodNumber(game, currentPeriod);
+        const title = legacyTechRounds(game)
+            ? `Period ${period} · Round ${currentPeriod % techMarketSteps + 1}` : `Period ${period}`;
 
         await feedItem(context, { ...game, currentPeriod }, title,
             "Players get another turn", "/static/imgs/icons/Stock.svg", "grey");

@@ -4,8 +4,8 @@ import { specialDeck } from "../shared/chance-cards";
 import { minimumPlayers, maximumPlayers } from "../shared/rules";
 import { fail, feedItem, members, seedCatalog } from "./library";
 import { spectatorHost } from "./hosting";
-import { franticDeck, gameStocks, validPackLength } from "./packRules";
-import { packPeriods } from "../shared/packs";
+import { franticDeck, gameStocks, packStartingCash, validPackLength } from "./packRules";
+import { gamePeriodCount } from "../shared/packs";
 import { chooseTechStart, techPrices } from "./techMarket";
 
 export async function launchGame(context: MutationContext, game: Document_<"games">, allowNpcs = true)
@@ -21,7 +21,7 @@ export async function launchGame(context: MutationContext, game: Document_<"game
         fail("At least four players are required");
     }
 
-    const periods = packPeriods(game.pack, game.periodCount + 1);
+    const periods = gamePeriodCount(game);
     if (!validPackLength(game.pack, periods - 1))
     {
         fail("Invalid game length");
@@ -56,6 +56,7 @@ export async function launchGame(context: MutationContext, game: Document_<"game
     for (const [index, seat] of players.entries())
     {
         await context.db.patch(seat._id, { seatOrder: index, periodStartRanking: index + 1,
+            ...(game.pack === "tech" && { cash: packStartingCash(game.pack) }),
             controller: seat.controller ?? { kind: "human", userId: seat.userId! } });
     }
 
@@ -65,7 +66,7 @@ export async function launchGame(context: MutationContext, game: Document_<"game
         const techStart = chooseTechStart(context.random(), periods);
         const prices = techPrices(techStart, 0);
 
-        market = { techStart, prices, priceHistory: [{ period: 0, prices }] };
+        market = { techStart, periodCount: periods - 1, prices, priceHistory: [{ period: 0, prices }] };
     }
 
     await deal(context, { ...game, ...market }, players);

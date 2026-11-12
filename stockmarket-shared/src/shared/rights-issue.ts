@@ -1,4 +1,4 @@
-import { floorTradeQuantity, validTradeQuantity } from "./rules";
+import { floorTradeQuantity, roundMoney, sharesForCash, validTradeQuantity } from "./rules";
 import type { Pack } from "./packs";
 
 /** Retail Rights Issue: one new share per two held, at £1 each. */
@@ -14,6 +14,11 @@ export const rightsEntitlement = (held: number, pack?: Pack) => floorTradeQuanti
 export function rightsMaximum(held: number, pack?: Pack, isActor = false)
 {
     return pack === "frantic" && isActor ? Math.max(1000, rightsEntitlement(held, pack)) : rightsEntitlement(held, pack);
+}
+
+export function maxRightsPurchase(maximum: number, cash: number, available: number, price: number)
+{
+    return floorTradeQuantity(Math.min(maximum, sharesForCash(cash, price), available));
 }
 
 export interface RightsIssue {
@@ -52,7 +57,13 @@ export function rightsPurchaseError(quantity: number, maximum: number, cash: num
         return "Enter a positive number of shares in steps of 1,000.";
     }
 
-    return quantity * price > cash ? "You don't have enough cash. Try fewer shares." : "";
+    if (quantity > 0 && (!Number.isFinite(price) || price <= 0))
+    {
+        return "Choose a tradable stock";
+    }
+
+    return quantity > 0 && (!Number.isFinite(cash) || roundMoney(quantity * price) > cash)
+        ? "You don't have enough cash. Try fewer shares." : "";
 }
 
 export { sharesAvailable as rightsAvailable } from "./rules";

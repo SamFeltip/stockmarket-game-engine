@@ -1,9 +1,9 @@
 import type { MutationContext, QueryContext, Document_, Id } from "./model";
 import { debentureInHand } from "../shared/debenture";
 import { cashStockKey, chanceStockKey, specialDeck, type DeckCard } from "../shared/chance-cards";
-import { forecastPeriod } from "../shared/packs";
+import { legacyTechRounds, techMarketSteps } from "../shared/packs";
 import { fail } from "./library";
-import { techForecasts, techStocks } from "./techMarket";
+import { techForecasts } from "./techMarket";
 
 export async function playerPeriodInsights(context: QueryContext, playerId: Id<"players">, period: number)
 {
@@ -30,7 +30,9 @@ export async function privateForecasts(context: QueryContext, game: Document_<"g
         return [];
     }
 
-    const hand = await playerPeriodInsights(context, playerId, forecastPeriod(game.currentPeriod));
+    const period = legacyTechRounds(game)
+        ? game.currentPeriod - game.currentPeriod % techMarketSteps : game.currentPeriod;
+    const hand = await playerPeriodInsights(context, playerId, period);
 
     return hand.filter((card) => card.forecast);
 }
@@ -75,13 +77,15 @@ function handsFor(context: MutationContext, game: Document_<"games">, deck: Deck
             fail("Not enough chance or cash insights for all players");
         }
 
-        // Fresh specials every round, with forecast windows dealt only at the start of their period.
-        const forecasts = game.currentPeriod === forecastPeriod(game.currentPeriod)
-            ? shuffle(context, techForecasts(game.techStart!, game.currentPeriod)).flat() : [];
-        const forecastCount = techStocks.length * 2;
+        const dealForecasts = !legacyTechRounds(game) || game.currentPeriod % techMarketSteps === 0;
+        const windows = dealForecasts ? shuffle(context, techForecasts(game)) : [];
+        // Reserve windows spanning the block, then add random windows without duplicating any.
+        const coverage = windows.filter((window) => window.coversBlock);
+        const selected = coverage.concat(windows.filter((window) => !window.coversBlock).slice(0, seats * 2 - coverage.length));
+        const forecasts = shuffle(context, selected);
 
-        return Array.from({ length: seats }, (_, index) => [chance[index], cash[index],
-            ...forecasts.slice(index * forecastCount, (index + 1) * forecastCount)]);
+        return Array.from({ length: seats }, (_, index) =>
+            [chance[index], cash[index], ...forecasts.slice(index * 2, (index + 1) * 2).flatMap((window) => window.cards)]);
     }
 
     const handSize = 10;

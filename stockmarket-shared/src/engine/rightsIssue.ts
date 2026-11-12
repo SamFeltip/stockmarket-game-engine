@@ -8,6 +8,7 @@ import { rightsMaximum, rightsIssueOrder, rightsPriceFor, rightsPurchaseError, r
 import { companyRoles, roleQualification } from "../shared/company-roles";
 import { advanceNpcRights } from "./npcRights";
 import { chanceStockKey } from "../shared/chance-cards";
+import { roundMoney } from "../shared/rules";
 export async function activateRightsIssue(context: MutationContext, game: Document_<"games">,
     player: Document_<"players">, display: { name: string; profileRoot: string },
     command: { expectedPeriod: number; expectedTurn: number; insightId: Document_<"playerInsights">["_id"]; stockKey: number })
@@ -113,7 +114,8 @@ export async function purchase(context: MutationContext, game: Document_<"games"
 
         const holdings = player.holdings.map((holding) => holding.stockKey === issue.stockKey
             ? { ...holding, quantity: held + quantity } : holding);
-        const updated = { ...player, holdings, ...qualification, cash: player.cash - quantity * unitPrice };
+        const updated = { ...player, holdings, ...qualification,
+            cash: roundMoney(player.cash - roundMoney(quantity * unitPrice)) };
         const roleAfter = companyRoles(seats.map((seat) => seat._id === player._id ? updated : seat), issue.stockKey)
             .find((role) => role.playerId === player._id)?.role;
 
