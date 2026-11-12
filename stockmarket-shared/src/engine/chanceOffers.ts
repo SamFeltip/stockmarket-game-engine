@@ -1,10 +1,10 @@
 import type { ChanceOffer, StockPrice } from "../packages/game-contracts/src";
 import type { QueryContext, Document_ } from "./model";
-import { chanceStockKey, loanAmount } from "../shared/chance-cards";
-import { rightsAvailable, rightsMaximum, rightsPriceFor } from "../shared/rights-issue";
+import { cashCardAward, chanceStockKey } from "../shared/chance-cards";
+import { rightsAvailable, rightsEntitlement, rightsPriceFor } from "../shared/rights-issue";
 import { rightsPurchase } from "../packages/npc-engine/src/chance";
-import { debentureInHand } from "../shared/debenture";
-import { debentureOffers } from "./debenture";
+import { debentureInHand, debentureRuleFor, isStockRedemptionCard } from "../shared/debenture";
+import { debentureClaims } from "./debenture";
 import { playerPeriodInsights, retainedDebentures } from "./dealing";
 
 export async function chanceOffers(context: QueryContext, game: Document_<"games">,
@@ -12,30 +12,31 @@ export async function chanceOffers(context: QueryContext, game: Document_<"games
 {
     const cards = (await retainedDebentures(context, game, self._id))
         .concat(await playerPeriodInsights(context, self._id, game.currentPeriod));
-    const debentures = cards.some((card) => card.chanceKind === "debenture" && debentureInHand(card, game.currentPeriod))
-        ? await debentureOffers(context, game, self) : [];
+    const claims = await debentureClaims(context, game, self, cards);
     const offers: ChanceOffer[] = [];
     for (const card of cards.filter((item) => item.gameId === game._id && item.stockKey === chanceStockKey
       && !item.used))
     {
-        if (card.chanceKind === "debenture" && debentureInHand(card, game.currentPeriod))
+        const award = cashCardAward(card.chanceKind, game.pack, self.cash);
+        if (isStockRedemptionCard(card.chanceKind) && debentureInHand(card, game.currentPeriod))
         {
-            for (const offer of debentures.filter((item) => !item.unavailableReason && item.amount !== null))
+            const offersForCard = claims[debentureRuleFor(card, game.pack)] ?? [];
+            for (const offer of offersForCard.filter((item) => !item.unavailableReason && item.amount !== null))
             {
                 offers.push({ action: { kind: "debenture", insightId: card._id, stockKey: offer.stockKey },
                     amount: offer.amount! });
             }
         }
-        else if (card.period === game.currentPeriod && card.chanceKind === "loan")
+        else if (card.period === game.currentPeriod && award)
         {
-            offers.push({ action: { kind: "government-loan", insightId: card._id }, amount: loanAmount(game.pack) });
+            offers.push({ action: { kind: "government-loan", insightId: card._id }, amount: award.amount });
         }
         else if (card.period === game.currentPeriod && card.chanceKind === "rights" && !card.resolved)
         {
             for (const price of prices)
             {
-                const maximum = rightsMaximum(self.holdings.find((item) => item.stockKey === price.stockKey)
-                    ?.quantity ?? 0, game.pack, true);
+                const maximum = rightsEntitlement(self.holdings.find((item) => item.stockKey === price.stockKey)
+                    ?.quantity ?? 0, game.pack);
                 const issuePrice = rightsPriceFor(game.pack, price.value);
                 const quantity = rightsPurchase(price.value, maximum, self.cash,
                     rightsAvailable(players, price.stockKey), issuePrice);

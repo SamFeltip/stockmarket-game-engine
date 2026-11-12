@@ -1,12 +1,11 @@
 import { deal } from "./dealing";
 import type { MutationContext, Document_ } from "./model";
-import { specialDeck } from "../shared/chance-cards";
 import { minimumPlayers, maximumPlayers } from "../shared/rules";
-import { fail, feedItem, members, seedCatalog } from "./library";
+import { fail, feedItem, members, seedStocks } from "./library";
 import { spectatorHost } from "./hosting";
-import { franticDeck, gameStocks, packStartingCash, validPackLength } from "./packRules";
-import { gamePeriodCount } from "../shared/packs";
-import { chooseTechStart, techPrices } from "./techMarket";
+import { gameStocks, launchMarket, validPackLength } from "./packRules";
+import { gamePeriodCount, rulesForPack } from "../shared/packs";
+import { buildDeck, deckForPack } from "./packDecks";
 
 export async function launchGame(context: MutationContext, game: Document_<"games">, allowNpcs = true)
 {
@@ -38,38 +37,34 @@ export async function launchGame(context: MutationContext, game: Document_<"game
         fail("New NPC games are temporarily unavailable");
     }
 
-    await seedCatalog(context);
-    const cards = game.pack === "tech" ? [] : await context.db.query("insights").collect();
-    const stocks = await gameStocks(context, game);
-    if (hasNpcs && cards.some((card) => !stocks.some((stock) => stock.key === card.stockKey && stock.display)))
+    await seedStocks(context);
+    const rules = rulesForPack(game.pack);
+    const pack = game.pack ?? "classic";
+    const deck = deckForPack(pack);
+    const cards = buildDeck(pack);
+    const stockCards = cards.filter((card) => card.stockKey > 0);
+    if (hasNpcs && stockCards.length > 0)
     {
-        fail("NPC games require an ordinary-only insight catalog");
+        const stocks = await gameStocks(context, game);
+        if (stockCards.some((card) => !stocks.some((stock) => stock.key === card.stockKey && stock.display)))
+        {
+            fail("NPC games require the deck’s ordinary stocks to be tradable");
+        }
     }
 
-    const catalogVersion = `${!game.pack || game.pack === "classic" ? "boardgame-108-v2" : game.pack}:${game._id}`;
-    const ordinary = cards.map((card) => ({ id: String(card._id), stockKey: card.stockKey, value: card.value,
-        description: card.description }));
-    const deck = game.pack === "frantic" ? franticDeck(ordinary) : ordinary.concat(specialDeck(game.pack));
-
-    await context.db.insert("gameCatalogs", { gameId: game._id, version: catalogVersion, cards: deck });
+    const catalogVersion = `${deck.catalogVersion ?? pack}:${game._id}`;
+    await context.db.insert("gameCatalogs", { gameId: game._id, version: catalogVersion, cards });
 
     for (const [index, seat] of players.entries())
     {
         await context.db.patch(seat._id, { seatOrder: index, periodStartRanking: index + 1,
-            ...(game.pack === "tech" && { cash: packStartingCash(game.pack) }),
+            ...(rules.resetCashAtLaunch && { cash: rules.openingCash }),
             controller: seat.controller ?? { kind: "human", userId: seat.userId! } });
     }
 
-    let market;
-    if (game.pack === "tech")
-    {
-        const techStart = chooseTechStart(context.random(), periods);
-        const prices = techPrices(techStart, 0);
+    const market = launchMarket(game.pack, () => context.random(), periods);
 
-        market = { techStart, periodCount: periods - 1, prices, priceHistory: [{ period: 0, prices }] };
-    }
-
-    await deal(context, { ...game, ...market }, players);
+    await deal(context, { ...game, ...market }, players, cards);
     await context.db.patch(game._id, { ...market, status: "playing", currentPlayerId: players[0]._id,
         currentUserId: players[0].userId, rulesVersion: 2, catalogVersion });
     await feedItem(context, game, "game started", "game started", "/static/imgs/icons/Handshake.svg", "grey");

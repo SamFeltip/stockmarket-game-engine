@@ -1,20 +1,19 @@
 import { floorTradeQuantity, roundMoney, sharesForCash, validTradeQuantity } from "./rules";
-import type { Pack } from "./packs";
+import { rulesForPack, type Pack } from "./packs";
 
 /** Retail Rights Issue: one new share per two held, at £1 each. */
 export const rightsIssuePrice = 1;
 
 export function rightsPriceFor(pack: Pack | undefined, marketPrice: number)
 {
-    return pack === "tech" ? Math.max(0.01, Math.round(marketPrice * 80) / 100) : rightsIssuePrice;
+    const { marketPricePercent } = rulesForPack(pack).rights;
+
+    return marketPricePercent === undefined ? rightsIssuePrice
+        : Math.max(0.01, Math.round(marketPrice * marketPricePercent) / 100);
 }
 
-export const rightsEntitlement = (held: number, pack?: Pack) => floorTradeQuantity(pack === "frantic" ? held : held / 2);
-
-export function rightsMaximum(held: number, pack?: Pack, isActor = false)
-{
-    return pack === "frantic" && isActor ? Math.max(1000, rightsEntitlement(held, pack)) : rightsEntitlement(held, pack);
-}
+export const rightsEntitlement = (held: number, pack?: Pack) =>
+    floorTradeQuantity(held * rulesForPack(pack).rights.sharesPerHolding);
 
 export function maxRightsPurchase(maximum: number, cash: number, available: number, price: number)
 {
@@ -48,8 +47,11 @@ export function rightsPurchaseError(quantity: number, maximum: number, cash: num
 
     if (quantity > maximum)
     {
-        return pack === "frantic" ? "Choose a quantity within your offer."
-            : "You may only buy one extra share for every two you owned when the Rights Issue started.";
+        const { sharesPerHolding } = rulesForPack(pack).rights;
+
+        return sharesPerHolding === 0.5
+            ? "You may only buy one extra share for every two you owned when the Rights Issue started."
+            : `You may only buy up to ${sharesPerHolding} extra shares per share you owned when the Rights Issue started.`;
     }
 
     if (quantity !== 0 && !validTradeQuantity(quantity))

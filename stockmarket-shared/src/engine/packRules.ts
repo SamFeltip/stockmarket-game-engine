@@ -1,11 +1,9 @@
 import { stockCatalog } from "../catalog";
-import { cashStock, specialDeck, type DeckCard } from "../shared/chance-cards";
+import { cashStock } from "../shared/chance-cards";
 import { withRoleBonuses, type CompanyRole } from "../shared/company-roles";
-import { legacyTechRounds, packLengths, type Pack } from "../shared/packs";
-import { startingCash } from "../shared/rules";
-import { roundPrices } from "../shared/settlement";
+import { legacyTechRounds, packLengths, rulesForPack, type Pack } from "../shared/packs";
 import type { Document_, Id, QueryContext } from "./model";
-import { techForecastDescription, techPeriodCloses, techPrices, techStocks } from "./techMarket";
+import { chooseTechStart, techForecastDescription, techPeriodCloses, techPrices, techStocks } from "./techMarket";
 
 export function validPackLength(pack: Pack | undefined, lastPeriod: number)
 {
@@ -14,55 +12,75 @@ export function validPackLength(pack: Pack | undefined, lastPeriod: number)
 
 export function packStartingCash(pack?: Pack)
 {
-    return pack === "tech" ? 3_000_000 : startingCash;
+    return rulesForPack(pack).openingCash;
 }
 
-function franticRank(stockKey: number)
+export function franticRank(stockKey: number)
 {
     return stockKey === 7 ? 6 : stockCatalog.find((stock) => stock.key === stockKey)?.variation ?? 1;
 }
 
-export function franticDeck(cards: DeckCard[])
+function catalogStocks(context: QueryContext)
 {
-    const natwest = cards.filter((card) => card.stockKey === 12);
-    const trusthouse = natwest.length > 0 ? natwest.map((card) => ({
-        ...card, id: `frantic:trusthouse:${card.id}`, stockKey: 7,
-    })) : cards.filter((card) => card.stockKey === 7);
-    const ordinary = cards.filter((card) => card.stockKey !== 7).concat(trusthouse).map((card) =>
-    {
-        if (!stockCatalog.some((stock) => stock.key === card.stockKey))
-        {
-            return card;
-        }
-
-        const value = Math.round(card.value * 1.45 ** franticRank(card.stockKey) * 100) / 100;
-        const name = stockCatalog.find((stock) => stock.key === card.stockKey)?.name;
-
-        return { ...card, value, description: `${name} Insight ${value.toFixed(2)}` };
-    });
-
-    return ordinary.concat(specialDeck("frantic"));
+    return context.db.query("stocks").collect();
 }
 
-export async function packStocks(context: QueryContext, pack?: Pack, techStart?: number)
+async function franticStocks(context: QueryContext)
 {
-    if (pack === "tech")
+    const stocks = await catalogStocks(context);
+
+    return stocks.map((stock) => stock.display ? {
+        ...stock, startingValue: stock.startingValue * 3, variation: franticRank(stock.key),
+    } : stock);
+}
+
+function historicalStocks(_context: QueryContext, techStart?: number)
+{
+    if (techStart === undefined)
     {
-        if (techStart === undefined)
-        {
-            return [...techStocks, cashStock];
-        }
-
-        const quotes = techPrices(techStart, 0);
-
-        return [...techStocks.map((stock, index) => ({ ...stock, startingValue: quotes[index].value })), cashStock];
+        return [...techStocks, cashStock];
     }
 
-    const stocks = await context.db.query("stocks").collect();
+    const quotes = techPrices(techStart, 0);
 
-    return pack === "frantic" ? stocks.map((stock) => stock.display ? {
-        ...stock, startingValue: stock.startingValue * 3, variation: franticRank(stock.key),
-    } : stock) : stocks;
+    return [...techStocks.map((stock, index) => ({ ...stock, startingValue: quotes[index].value })), cashStock];
+}
+
+function historicalOpening(random: number, periods: number)
+{
+    const techStart = chooseTechStart(random, periods);
+    const prices = techPrices(techStart, 0);
+
+    return { techStart, periodCount: periods - 1, prices, priceHistory: [{ period: 0, prices }] };
+}
+
+type Stock = Pick<Document_<"stocks">, "key" | "name" | "display" | "variation" | "startingValue"
+    | "imagePath" | "secondaryImagePath">;
+
+interface PackMarket {
+    stocks(context: QueryContext, techStart?: number): Stock[] | Promise<Stock[]>;
+    settle(input: SettlementInput): SettlementCard[];
+    opening?: typeof historicalOpening;
+    useCatalogScores?: boolean;
+}
+
+const catalogMarket: PackMarket = { stocks: catalogStocks, useCatalogScores: true, settle: companyRoleSettlement };
+const packMarkets: Record<Pack, PackMarket> = {
+    classic: catalogMarket,
+    frantic: { stocks: franticStocks, settle: companyRoleSettlement },
+    tech: { stocks: historicalStocks, opening: historicalOpening, settle: historicalSettlement },
+};
+
+export function packStocks(context: QueryContext, pack: Pack = "classic", techStart?: number)
+{
+    return packMarkets[pack].stocks(context, techStart);
+}
+
+export function launchMarket(pack: Pack | undefined, random: () => number, periods: number)
+{
+    const opening = packMarkets[pack ?? "classic"].opening;
+
+    return opening?.(random(), periods);
 }
 
 export async function gameStocks(context: QueryContext, game: Document_<"games">)
@@ -73,11 +91,12 @@ export async function gameStocks(context: QueryContext, game: Document_<"games">
 export async function displayGameStocks(context: QueryContext, game?: Pick<Document_<"games">, "pack" | "techStart">)
 {
     const stocks = await packStocks(context, game?.pack, game?.techStart);
+    const market = packMarkets[game?.pack ?? "classic"];
     const scored = stocks.map((stock) =>
     {
         const classicScore = stockCatalog.find((item) => item.key === stock.key)?.variation;
 
-        return game?.pack === "frantic" || classicScore === undefined ? stock : { ...stock, variation: classicScore };
+        return market.useCatalogScores && classicScore !== undefined ? { ...stock, variation: classicScore } : stock;
     });
 
     return scored.sort((a, b) => Number(b.display) - Number(a.display) || a.variation - b.variation || a.key - b.key);
@@ -104,56 +123,60 @@ export function revealInsights(game: Document_<"games">, insights: Document_<"pl
         : effective;
 }
 
-export function settlementInsights(game: Document_<"games">, insights: Document_<"playerInsights">[],
-    players: Document_<"players">[], stocks: Awaited<ReturnType<typeof gameStocks>>): SettlementCard[]
+type SettlementInput = {
+    game: Document_<"games">;
+    insights: Document_<"playerInsights">[];
+    players: Document_<"players">[];
+    stocks: Stock[];
+};
+
+function companyRoleSettlement({ insights, players, stocks }: SettlementInput): SettlementCard[]
 {
-    const tech = game.pack === "tech";
-    const effective = tech ? insights.filter((card) => !card.forecast) : withRoleBonuses(insights, players, stocks);
-    const crash = game.pack === "crashing" && (game.currentPeriod + 1) % 3 === 0;
-    if (!tech && !crash)
+    return withRoleBonuses(insights, players, stocks);
+}
+
+function marketCard({ game, players }: SettlementInput, stockKey: number, value: number,
+    description: string, date?: string): SettlementCard
+{
+    const id = `market:${game.currentPeriod}:${stockKey}${date ? `:${date}` : ""}`;
+
+    return { _id: id as Id<"playerInsights">, _creationTime: 0, gameId: game._id, playerId: players[0]._id,
+        period: game.currentPeriod, stockKey, resolved: true, value, description };
+}
+
+function historicalSettlement(input: SettlementInput): SettlementCard[]
+{
+    const { game, insights } = input;
+    const effective = insights.filter((card) => !card.forecast);
+    const closes = techPeriodCloses(game);
+    const previous = new Map(game.prices.map(({ stockKey, value }) => [stockKey, value]));
+    if (!legacyTechRounds(game))
     {
-        return effective;
+        const last = closes.at(-1)!;
+        const results = last.prices.map(({ stockKey, value }, index) => ({
+            ...marketCard(input, stockKey, Math.round((value - previous.get(stockKey)!) * 100) / 100,
+                `Historical close · ${last.label}`, last.date),
+            marketSteps: closes.map(({ prices }) => prices[index].value),
+        }));
+
+        return effective.concat(results);
     }
 
-    function marketCard(stockKey: number, value: number, description: string, date?: string): SettlementCard
-    {
-        const id = `market:${game.currentPeriod}:${stockKey}${date ? `:${date}` : ""}`;
-
-        return { _id: id as Id<"playerInsights">, _creationTime: 0, gameId: game._id, playerId: players[0]._id,
-            period: game.currentPeriod, stockKey, resolved: true, value, description };
-    }
-
-    if (tech)
-    {
-        const closes = techPeriodCloses(game);
-        const previous = new Map(game.prices.map(({ stockKey, value }) => [stockKey, value]));
-        if (!legacyTechRounds(game))
+    const events = closes.flatMap(({ date, label, prices }) =>
+        prices.map(({ stockKey, value }) =>
         {
-            const last = closes.at(-1)!;
-            const results = last.prices.map(({ stockKey, value }, index) => ({
-                ...marketCard(stockKey, Math.round((value - previous.get(stockKey)!) * 100) / 100,
-                    `Historical close · ${last.label}`, last.date),
-                marketSteps: closes.map(({ prices }) => prices[index].value),
-            }));
+            const change = Math.round((value - previous.get(stockKey)!) * 100) / 100;
 
-            return effective.concat(results);
-        }
+            previous.set(stockKey, value);
 
-        const events = closes.flatMap(({ date, label, prices }) =>
-            prices.map(({ stockKey, value }) =>
-            {
-                const change = Math.round((value - previous.get(stockKey)!) * 100) / 100;
+            return marketCard(input, stockKey, change, `Historical close · ${label}`, date);
+        }));
 
-                previous.set(stockKey, value);
+    return effective.concat(events);
+}
 
-                return marketCard(stockKey, change, `Historical close · ${label}`, date);
-            }));
-
-        return effective.concat(events);
-    }
-
-    const prices = roundPrices(game.prices, effective, stocks, game.suspended);
-
-    return effective.concat(prices.map(({ stockKey, value }) =>
-        marketCard(stockKey, -(Math.round(value * 30) / 100), "Market crash · 30% drop")));
+export function settlementInsights(game: Document_<"games">, insights: Document_<"playerInsights">[],
+    players: Document_<"players">[], stocks: Stock[]): SettlementCard[]
+{
+    return packMarkets[game.pack ?? "classic"].settle({ game, insights, players, stocks });
 }

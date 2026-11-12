@@ -1,7 +1,7 @@
 import type { Document_, Id, MutationContext } from "../../stockmarket-shared/src/engine/model";
 import type { NpcAction, NpcObservation } from "../../stockmarket-shared/src/packages/game-contracts/src";
 import { startingCash, minimumPlayers, maximumPlayers, validGameLength } from "../../stockmarket-shared/src/shared/rules";
-import { members, seedCatalog, roundInsights, GameError } from "../../stockmarket-shared/src/engine/library";
+import { members, seedStocks, roundInsights, GameError } from "../../stockmarket-shared/src/engine/library";
 import { launchGame } from "../../stockmarket-shared/src/engine/launch";
 import { applyTurn } from "../../stockmarket-shared/src/engine/commands";
 import { advancePeriod } from "../../stockmarket-shared/src/engine/advancePeriod";
@@ -11,7 +11,7 @@ import { spendSuspension } from "../../stockmarket-shared/src/engine/suspensions
 import { buildNpcObservation } from "../../stockmarket-shared/src/engine/observation";
 import { publicSeats } from "../../stockmarket-shared/src/engine/legalActions";
 import { pendingSuspensions } from "../../stockmarket-shared/src/shared/suspensions";
-import { debentureInHand } from "../../stockmarket-shared/src/shared/debenture";
+import { debentureInHand, isStockRedemptionCard } from "../../stockmarket-shared/src/shared/debenture";
 import { rightsAvailable, rightsIssuePrice } from "../../stockmarket-shared/src/shared/rights-issue";
 import { roundPrices, portfolioWorth } from "../../stockmarket-shared/src/shared/settlement";
 import { withRoleBonuses } from "../../stockmarket-shared/src/shared/company-roles";
@@ -67,7 +67,7 @@ export class GameEnvironment {
         }
         if (!Number.isSafeInteger(config.seed)) { throw new GameError("Seed must be a safe integer"); }
         const env = new GameEnvironment(config.seed);
-        await seedCatalog(env.runtime);
+        await seedStocks(env.runtime);
         const stocks = (await env.store.query("stocks").collect()).filter((stock) => stock.display);
         const prices = stocks.map((stock) => ({ stockKey: stock.key, value: stock.startingValue }));
         const hostId = await env.store.insert("users", { name: "Agent 0", profileRoot: "" });
@@ -151,7 +151,7 @@ export class GameEnvironment {
             const token = `${game.currentPeriod}:${game.turn}:${phase}:${cardId}:${issue?.index ?? 0}`;
             const hand = await this.store.query("playerInsights").withIndex("by_player_period", (query) =>
                 query.eq("playerId", playerId)).collect();
-            const ownCards = hand.filter((card) => card.chanceKind !== "debenture" || card.period === game.currentPeriod
+            const ownCards = hand.filter((card) => !isStockRedemptionCard(card.chanceKind) || card.period === game.currentPeriod
                 || debentureInHand(card, game.currentPeriod)).map((card) => ({
                 id: card._id, stockKey: card.stockKey, value: card.value, period: card.period,
                 chanceKind: card.chanceKind, used: card.used ?? false, resolved: card.resolved,
@@ -218,7 +218,7 @@ export class GameEnvironment {
     async standings() {
         return this.atomic(async () => {
             const game = await this.game();
-            return publicSeats(await members(this.runtime, this.gameId), game.prices);
+            return publicSeats(await members(this.runtime, this.gameId), game);
         });
     }
 }

@@ -1,11 +1,11 @@
 import type { MutationContext, Document_, Id } from "./model";
 import { companyRoles, roleQualification, type CompanyRole } from "../shared/company-roles";
-import { chanceStockKey, loanAmount } from "../shared/chance-cards";
+import { bankruptcyBuyoutName, cashCardAward, chanceStockKey } from "../shared/chance-cards";
 import { transition, tradeError } from "../packages/game-contracts/src";
 import { fail, feedItem, members } from "./library";
 import { isCurrent } from "./seats";
-import { debentureInHand } from "../shared/debenture";
-import { debentureOffers } from "./debenture";
+import { debentureInHand, debentureRuleFor, isStockRedemptionCard } from "../shared/debenture";
+import { debentureOffers, missingDebentureStock } from "./debenture";
 import { gameStock } from "./packRules";
 import { marketFor } from "./legalActions";
 export async function applyTurn(
@@ -45,34 +45,39 @@ export async function applyTurn(
     let roleBefore: CompanyRole | undefined;
     let roleAfter: CompanyRole | undefined;
     let unitPrice: number | undefined;
-    let debentureSale: { stockKey: number; quantity: number; debenturePayout: number } | undefined;
+    let cashBonus: number | undefined;
+    let debentureSale: { stockKey: number; quantity: number; debenturePayout: number; redemptionName?: string } | undefined;
     if (action.kind === "government-loan")
     {
         const card = await context.db.get(action.insightId);
+        const award = cashCardAward(card?.chanceKind, game.pack, player.cash);
         if (!card || card.gameId !== game._id || card.playerId !== player._id
           || card.period !== game.currentPeriod || card.stockKey !== chanceStockKey
-          || card.chanceKind !== "loan" || card.used)
+          || !award || card.used)
         {
-            fail("This Government Loan card cannot be used");
+            fail(card?.chanceKind === "print-money" ? "This Print Money card cannot be used"
+                : "This Government Loan card cannot be used");
         }
 
         await context.db.patch(card._id, { used: true });
-        await context.db.patch(player._id, { cash: player.cash + loanAmount(game.pack) });
-        message = "received government bonus";
+        cashBonus = award.amount;
+        await context.db.patch(player._id, { cash: player.cash + cashBonus });
+        message = award.message;
     }
     else if (action.kind === "debenture")
     {
         const card = await context.db.get(action.insightId);
         if (!card || card.gameId !== game._id || card.playerId !== player._id || card.stockKey !== chanceStockKey
-          || card.chanceKind !== "debenture" || !debentureInHand(card, game.currentPeriod))
+          || !isStockRedemptionCard(card.chanceKind) || !debentureInHand(card, game.currentPeriod))
         {
             fail("This Debenture card cannot be used");
         }
 
-        const offer = (await debentureOffers(context, game, player)).find((item) => item.stockKey === action.stockKey);
+        const rule = debentureRuleFor(card, game.pack);
+        const offer = (await debentureOffers(context, game, player, rule)).find((item) => item.stockKey === action.stockKey);
         if (!offer || offer.unavailableReason || offer.amount === null)
         {
-            fail(offer?.unavailableReason ?? (game.pack === "tech" ? "Choose an eligible stock you own" : "Choose a bankrupt stock you own"));
+            fail(offer?.unavailableReason ?? missingDebentureStock(rule));
         }
 
         const updated = { ...player, cash: player.cash + offer.amount,
@@ -87,8 +92,11 @@ export async function applyTurn(
         await context.db.patch(player._id, { cash: updated.cash, holdings: updated.holdings,
             chairmanSince: updated.chairmanSince, directorSince: updated.directorSince });
         await context.db.patch(card._id, { used: true });
-        debentureSale = { stockKey: action.stockKey, quantity: -offer.quantity, debenturePayout: offer.amount };
-        message = `Debenture sold at £${offer.amount.toLocaleString("en-GB")}`;
+        const redemptionName = card.chanceKind === "bankruptcy-buyout" ? bankruptcyBuyoutName : undefined;
+
+        debentureSale = { stockKey: action.stockKey, quantity: -offer.quantity, debenturePayout: offer.amount,
+            ...(redemptionName && { redemptionName }) };
+        message = `${redemptionName ?? "Debenture"} sold at £${offer.amount.toLocaleString("en-GB")}`;
     }
     else if (action.kind !== "pass")
     {
@@ -130,7 +138,7 @@ export async function applyTurn(
     const trade: Partial<Document_<"feed">> = {};
     if (action.kind === "government-loan")
     {
-        trade.cashBonus = loanAmount(game.pack);
+        trade.cashBonus = cashBonus;
     }
     else if (action.kind === "debenture")
     {

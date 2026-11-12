@@ -1,6 +1,7 @@
 import type { MutationContext, Document_, Id } from "./model";
 import { members, roundInsights } from "./library";
-import { pendingSuspensions } from "../shared/suspensions";
+import { rulesForPack } from "../shared/packs";
+import { hasTargetedSuspension, pendingSuspensions } from "../shared/suspensions";
 import { gameStocks, settlementInsights } from "./packRules";
 import { roundPrices } from "../shared/settlement";
 import { chooseNpcAction } from "../packages/npc-engine/src/runtime";
@@ -35,9 +36,13 @@ export async function advanceNpcSuspensions(context: MutationContext, game: Docu
     const stocks = await gameStocks(context, game);
     const prices = roundPrices(game.prices, settlementInsights(game, insights, players, stocks), stocks, game.suspended);
     const visible = game.prices.filter((price) => stocks.some((stock) => stock.display && stock.key === price.stockKey));
+    const { targetedSuspensions } = rulesForPack(game.pack);
+    const suspended = targetedSuspensions ? game.suspended.concat(visible.filter((price) =>
+        hasTargetedSuspension(game.targetedSuspensions, price.stockKey, owner._id)).map((price) => price.stockKey)) : game.suspended;
     const { action } = chooseNpcAction({ phase: "suspension", holdings: owner.holdings,
-        opening: visible, settled: prices, suspended: game.suspended });
-    const updated = await spendSuspension(context, game, card, action.stockKey);
+        opening: visible, settled: prices, suspended });
+    const updated = await spendSuspension(context, game, card, action.stockKey,
+        targetedSuspensions && action.stockKey !== undefined ? [owner._id] : undefined);
 
     await advanceNpcSuspensions(context, updated);
 }

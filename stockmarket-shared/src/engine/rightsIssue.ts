@@ -4,7 +4,7 @@ import { members, fail, feedItem } from "./library";
 import { isCurrent } from "./seats";
 import { finishTurn } from "./commands";
 import { publicIdentity } from "./identity";
-import { rightsMaximum, rightsIssueOrder, rightsPriceFor, rightsPurchaseError, rightsAvailable } from "../shared/rights-issue";
+import { rightsEntitlement, rightsIssueOrder, rightsPriceFor, rightsPurchaseError, rightsAvailable } from "../shared/rights-issue";
 import { companyRoles, roleQualification } from "../shared/company-roles";
 import { advanceNpcRights } from "./npcRights";
 import { chanceStockKey } from "../shared/chance-cards";
@@ -42,8 +42,7 @@ export async function activateRightsIssue(context: MutationContext, game: Docume
     {
         const held = seat.holdings.find((holding) => holding.stockKey === command.stockKey)?.quantity ?? 0;
 
-        return held > 0 || (game.pack === "frantic" && seat._id === player._id)
-            ? [{ playerId: seat._id, held, maximum: rightsMaximum(held, game.pack, seat._id === player._id) }] : [];
+        return held > 0 ? [{ playerId: seat._id, held, maximum: rightsEntitlement(held, game.pack) }] : [];
     });
     if (!stock)
     {

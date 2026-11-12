@@ -1,3 +1,22 @@
+import type { ChanceKind, DebentureRule } from "./chance-cards";
+import type { Pack } from "./packs";
+
+export function isStockRedemptionCard(kind?: ChanceKind): kind is "debenture" | "bankruptcy-buyout"
+{
+    return kind === "debenture" || kind === "bankruptcy-buyout";
+}
+
+/** Cards saved before variants were introduced use the rule of their original deck. */
+export function debentureRuleFor(card: { chanceKind?: ChanceKind; debentureRule?: DebentureRule }, pack?: Pack): DebentureRule
+{
+    if (card.chanceKind === "bankruptcy-buyout")
+    {
+        return "fixed-bankruptcy";
+    }
+
+    return card.debentureRule ?? (pack === "tech" ? "price-drop" : "bankruptcy");
+}
+
 /** A debenture can be used in the period it was dealt and the following period. */
 export function debentureInHand(card: { period: number; used?: boolean }, currentPeriod: number)
 {

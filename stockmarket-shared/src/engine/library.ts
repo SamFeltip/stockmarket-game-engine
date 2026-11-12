@@ -1,8 +1,9 @@
+import { tradingPrices } from "../shared/suspensions";
 import type { MutationContext, QueryContext, Document_, Id } from "./model";
 import { restoreDirectorPriority } from "./roleHistory";
 import { cashStock } from "../shared/chance-cards";
 import { portfolioWorth } from "../shared/settlement";
-import { stockCatalog, insightCatalog } from "../catalog";
+import { stockCatalog } from "../catalog";
 export class GameError extends Error {}
 export function fail(message: string): never { throw new GameError(message); }
 export async function members(context: QueryContext, gameId: Id<"games">)
@@ -15,7 +16,7 @@ export async function members(context: QueryContext, gameId: Id<"games">)
         seats.toSorted((a, b) => order.get(a._id)! - order.get(b._id)!));
 }
 
-export async function seedCatalog(context: MutationContext)
+export async function seedStocks(context: MutationContext)
 {
     if (!await context.db.query("stocks").withIndex("by_key", (q) => q.eq("key", cashStock.key)).unique())
     {
@@ -38,11 +39,6 @@ export async function seedCatalog(context: MutationContext)
     {
         await context.db.insert("stocks", stock);
     }
-
-    for (const insight of insightCatalog)
-    {
-        await context.db.insert("insights", insight);
-    }
 }
 
 export async function roundInsights(context: QueryContext, game: Document_<"games">)
@@ -52,12 +48,12 @@ export async function roundInsights(context: QueryContext, game: Document_<"game
 }
 
 export async function feedItem(context: MutationContext, game: Document_<"games">, title: string,
-    message: string, imageRoot: string, colour = "", trade: Pick<Partial<Document_<"feed">>, "stockKey" | "quantity" | "cashBonus" | "debenturePayout" | "roleBefore" | "roleAfter"> = {})
+    message: string, imageRoot: string, colour = "", trade: Pick<Partial<Document_<"feed">>, "stockKey" | "quantity" | "cashBonus" | "debenturePayout" | "redemptionName" | "roleBefore" | "roleAfter"> = {})
 {
     await context.db.insert("feed", { gameId: game._id, period: game.currentPeriod, title, message, imageRoot, colour, ...trade });
 }
 
 export function netWorth(player: Document_<"players">, game: Document_<"games">)
 {
-    return portfolioWorth(player, game.prices);
+    return portfolioWorth(player, tradingPrices(game, player._id));
 }

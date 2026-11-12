@@ -1,14 +1,37 @@
 import { gameStocks } from "./packRules";
 import type { QueryContext, Document_ } from "./model";
-import { bankruptcyPeriod } from "../shared/debenture";
+import { bankruptcyPeriod, debentureInHand, debentureRuleFor, isStockRedemptionCard } from "../shared/debenture";
+import { bankruptcyBuyoutPrice, chanceStockKey, type DebentureRule } from "../shared/chance-cards";
 
-export async function debentureOffers(context: QueryContext, game: Document_<"games">, player: Document_<"players">)
+export function debentureOffers(context: QueryContext, game: Document_<"games">, player: Document_<"players">,
+    rule: DebentureRule)
 {
-    if (game.pack === "tech")
+    return debenturePolicies[rule].offers(context, game, player);
+}
+
+export function missingDebentureStock(rule: DebentureRule)
+{
+    return debenturePolicies[rule].missingStock;
+}
+
+/** Evaluate each rule once, even when a player holds several copies of the same card. */
+export async function debentureClaims(context: QueryContext, game: Document_<"games">, player: Document_<"players">,
+    cards: Document_<"playerInsights">[])
+{
+    const rules = new Set(cards.filter((card) => card.gameId === game._id && card.playerId === player._id
+        && card.stockKey === chanceStockKey && isStockRedemptionCard(card.chanceKind) && debentureInHand(card, game.currentPeriod))
+        .map((card) => debentureRuleFor(card, game.pack)));
+    const claims: Partial<Record<DebentureRule, Awaited<ReturnType<typeof debentureOffers>>>> = {};
+    for (const rule of rules)
     {
-        return techDebentureOffers(context, game, player);
+        claims[rule] = await debentureOffers(context, game, player, rule);
     }
 
+    return claims;
+}
+
+async function bankruptcyOffers(context: QueryContext, game: Document_<"games">, player: Document_<"players">, fixedPrice?: number)
+{
     const history = game.priceHistory ?? [];
     const stocks = (await gameStocks(context, game)).filter((stock) => stock.display);
 
@@ -20,7 +43,7 @@ export async function debentureOffers(context: QueryContext, game: Document_<"ga
         const stock = stocks.find((item) => item.key === holding.stockKey)!;
         const opening = history.find((snapshot) => snapshot.period === 0)?.prices
             .find((price) => price.stockKey === holding.stockKey)?.value ?? stock.startingValue;
-        const unitPrice = Number.isFinite(opening) && opening > 0 ? opening : null;
+        const unitPrice = fixedPrice ?? (Number.isFinite(opening) && opening > 0 ? opening : null);
         const amount = unitPrice === null ? null : Math.round(holding.quantity * unitPrice * 100) / 100;
         const claimUntilPeriod = bankrupt === null ? null : bankrupt + 1;
         let unavailableReason: string | null = null;
@@ -42,6 +65,15 @@ export async function debentureOffers(context: QueryContext, game: Document_<"ga
     });
 }
 
+const debenturePolicies = {
+    bankruptcy: { offers: bankruptcyOffers, missingStock: "Choose a bankrupt stock you own" },
+    "fixed-bankruptcy": {
+        offers: (context: QueryContext, game: Document_<"games">, player: Document_<"players">) =>
+            bankruptcyOffers(context, game, player, bankruptcyBuyoutPrice),
+        missingStock: "Choose a bankrupt stock you own",
+    },
+    "price-drop": { offers: techDebentureOffers, missingStock: "Choose an eligible stock you own" },
+};
 
 async function techDebentureOffers(context: QueryContext, game: Document_<"games">, player: Document_<"players">)
 {

@@ -1,9 +1,8 @@
 import type { MutationContext, QueryContext, Document_, Id } from "./model";
-import { debentureInHand } from "../shared/debenture";
-import { cashStockKey, chanceStockKey, specialDeck, type DeckCard } from "../shared/chance-cards";
-import { legacyTechRounds, techMarketSteps } from "../shared/packs";
+import { debentureInHand, debentureRuleFor, isStockRedemptionCard } from "../shared/debenture";
 import { fail } from "./library";
-import { techForecasts } from "./techMarket";
+import type { DeckCard } from "../shared/chance-cards";
+import { deckForPack, forecastDealPeriod, shuffleDeck } from "./packDecks";
 
 export async function playerPeriodInsights(context: QueryContext, playerId: Id<"players">, period: number)
 {
@@ -20,7 +19,7 @@ export async function retainedDebentures(context: QueryContext, game: Document_<
 
     const previous = await playerPeriodInsights(context, playerId, game.currentPeriod - 1);
 
-    return previous.filter((card) => card.chanceKind === "debenture" && debentureInHand(card, game.currentPeriod));
+    return previous.filter((card) => isStockRedemptionCard(card.chanceKind) && debentureInHand(card, game.currentPeriod));
 }
 
 export async function privateForecasts(context: QueryContext, game: Document_<"games">, playerId: Id<"players">)
@@ -30,82 +29,40 @@ export async function privateForecasts(context: QueryContext, game: Document_<"g
         return [];
     }
 
-    const period = legacyTechRounds(game)
-        ? game.currentPeriod - game.currentPeriod % techMarketSteps : game.currentPeriod;
-    const hand = await playerPeriodInsights(context, playerId, period);
+    const hand = await playerPeriodInsights(context, playerId, forecastDealPeriod(game));
 
     return hand.filter((card) => card.forecast);
 }
 
-function shuffle<T>(context: MutationContext, deck: T[])
+export function npcPeriodInsights(context: QueryContext, game: Document_<"games">, playerId: Id<"players">)
 {
-    // Convex supplies seeded randomness that is stable across transaction retries.
-    for (let index = deck.length - 1; index > 0; index--)
-    {
-        const pick = Math.floor(context.random() * (index + 1));
-
-        [deck[index], deck[pick]] = [deck[pick], deck[index]];
-    }
-
-    return deck;
+    return game.pack === "tech" ? privateForecasts(context, game, playerId)
+        : playerPeriodInsights(context, playerId, game.currentPeriod);
 }
 
-async function dealDeck(context: MutationContext, game: Document_<"games">): Promise<DeckCard[]>
+export async function savedDeck(context: QueryContext, gameId: Id<"games">)
 {
-    const snapshot = await context.db.query("gameCatalogs").withIndex("by_game", (q) => q.eq("gameId", game._id)).unique();
+    const snapshot = await context.db.query("gameCatalogs").withIndex("by_game", (q) => q.eq("gameId", gameId)).unique();
+    if (!snapshot?.cards.length)
+    {
+        fail("This game has no saved deck. Start a new game.");
+    }
+
+    return snapshot.cards;
+}
+
+export async function deal(context: MutationContext, game: Document_<"games">, players: Document_<"players">[],
+    initialDeck?: DeckCard[])
+{
+    const deck = deckForPack(game.pack);
+    const cards = initialDeck ?? await savedDeck(context, game._id);
     // Dealing creates the current hand, so only the preceding round can retain cards.
     const previous = game.currentPeriod === 0 ? [] : await context.db.query("playerInsights")
         .withIndex("by_game_period", (q) => q.eq("gameId", game._id).eq("period", game.currentPeriod - 1)).collect();
-    const retained = previous.filter((card) => card.chanceKind === "debenture" && debentureInHand(card, game.currentPeriod));
+    const retained = previous.filter((card) => isStockRedemptionCard(card.chanceKind) && debentureInHand(card, game.currentPeriod));
     const heldIds = new Set(retained.map((card) => card.catalogCardId).filter(Boolean));
-    // Tech games started before the chance deck was added have an empty catalog.
-    const catalog = game.pack === "tech" && !snapshot?.cards.length ? specialDeck("tech")
-        : snapshot?.cards ?? (await context.db.query("insights").collect())
-            .map((card) => ({ ...card, id: String(card._id) }));
-
-    return shuffle(context, catalog.filter((card) => !heldIds.has(card.id)));
-}
-
-function handsFor(context: MutationContext, game: Document_<"games">, deck: DeckCard[], seats: number): DeckCard[][]
-{
-    const chance = deck.filter((card) => card.stockKey === chanceStockKey);
-    if (game.pack === "tech")
-    {
-        const cash = deck.filter((card) => card.stockKey === cashStockKey);
-        if (chance.length < seats || cash.length < seats)
-        {
-            fail("Not enough chance or cash insights for all players");
-        }
-
-        const dealForecasts = !legacyTechRounds(game) || game.currentPeriod % techMarketSteps === 0;
-        const windows = dealForecasts ? shuffle(context, techForecasts(game)) : [];
-        // Reserve windows spanning the block, then add random windows without duplicating any.
-        const coverage = windows.filter((window) => window.coversBlock);
-        const selected = coverage.concat(windows.filter((window) => !window.coversBlock).slice(0, seats * 2 - coverage.length));
-        const forecasts = shuffle(context, selected);
-
-        return Array.from({ length: seats }, (_, index) =>
-            [chance[index], cash[index], ...forecasts.slice(index * 2, (index + 1) * 2).flatMap((window) => window.cards)]);
-    }
-
-    const handSize = 10;
-    const extraChancePerSeat = game.pack === "frantic" ? 2 : 0;
-    const extras = chance.slice(0, seats * extraChancePerSeat);
-    const extraIds = new Set(extras.map((card) => card.id));
-    const regular = deck.filter((card) => !extraIds.has(card.id));
-    if (regular.length < seats * handSize || extras.length < seats * extraChancePerSeat)
-    {
-        fail("Not enough insights for all players");
-    }
-
-    return Array.from({ length: seats }, (_, index) =>
-        regular.slice(index * handSize, (index + 1) * handSize)
-            .concat(extras.slice(index * extraChancePerSeat, (index + 1) * extraChancePerSeat)));
-}
-
-export async function deal(context: MutationContext, game: Document_<"games">, players: Document_<"players">[])
-{
-    const hands = handsFor(context, game, await dealDeck(context, game), players.length);
+    const shuffled = shuffleDeck(context, cards.filter((card) => !heldIds.has(card.id)));
+    const hands = deck.deal(context, game, shuffled, players.length);
     for (const [index, player] of players.entries())
     {
         for (const insight of hands[index])
@@ -114,6 +71,7 @@ export async function deal(context: MutationContext, game: Document_<"games">, p
                 gameId: game._id, playerId: player._id, period: game.currentPeriod,
                 stockKey: insight.stockKey, description: insight.description, value: insight.value, resolved: false,
                 catalogCardId: insight.id, chanceKind: insight.chanceKind, forecast: insight.forecast,
+                ...(isStockRedemptionCard(insight.chanceKind) && { debentureRule: debentureRuleFor(insight, game.pack) }),
             });
         }
     }

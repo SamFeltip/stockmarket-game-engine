@@ -54,6 +54,11 @@ export function roundPriceSteps(prices: Price[], insights: Insight[], stocks: St
 
 export function roundCash(player: { _id: string; cash: number }, insights: Insight[], stocks: Stock[])
 {
+    if (player.cash < 0)
+    {
+        return player.cash;
+    }
+
     const change = insights.filter((insight) => insight.playerId === player._id
       && stocks.some((stock) => stock.key === insight.stockKey && stock.name === "currency"))
         .reduce((sum, insight) => sum + insight.value, 0);

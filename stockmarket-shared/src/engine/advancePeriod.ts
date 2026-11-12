@@ -6,7 +6,7 @@ import { fail, feedItem, members, roundInsights } from "./library";
 
 import { publicSeats } from "./legalActions";
 import { gamePeriodNumber, legacyTechRounds, techMarketSteps } from "../shared/packs";
-import { pendingSuspensions } from "../shared/suspensions";
+import { nextTradingSuspensions, pendingSuspensions } from "../shared/suspensions";
 
 export async function advancePeriod(context: MutationContext, game: Document_<"games">, expectedPeriod: number)
 {
@@ -31,6 +31,7 @@ export async function advancePeriod(context: MutationContext, game: Document_<"g
 
     const effectiveInsights = settlementInsights(game, insights, players, stocks);
     const prices = roundPrices(game.prices, effectiveInsights, stocks, game.suspended);
+    const tradingSuspensions = nextTradingSuspensions(game, players);
     for (const seat of players)
     {
         await context.db.patch(seat._id, { cash: roundCash(seat, insights, stocks) });
@@ -38,7 +39,7 @@ export async function advancePeriod(context: MutationContext, game: Document_<"g
 
     await context.db.insert("periodSummaries", { gameId: game._id, period: game.currentPeriod,
         opening: game.prices, settled: prices });
-    const rankings = publicSeats(await members(context, game._id), prices);
+    const rankings = publicSeats(await members(context, game._id), { prices, tradingSuspensions });
     for (const seat of players)
     {
         await context.db.patch(seat._id, { periodStartRanking: rankings.find((item) =>
@@ -54,7 +55,8 @@ export async function advancePeriod(context: MutationContext, game: Document_<"g
     ];
 
     await context.db.patch(game._id, { prices, priceHistory, status: finished ? "finished" : "playing", currentPeriod,
-        turn: 0, suspended: [], suspensionPeriod: undefined,
+        turn: 0, suspended: [], suspensionPeriod: undefined, targetedSuspensions: undefined,
+        tradingSuspensions: tradingSuspensions.length ? tradingSuspensions : undefined,
         currentUserId: players[currentPeriod % players.length].userId,
         currentPlayerId: players[currentPeriod % players.length]._id });
 
