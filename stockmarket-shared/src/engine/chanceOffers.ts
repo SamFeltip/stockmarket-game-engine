@@ -39,7 +39,7 @@ export async function chanceOffers(context: QueryContext, game: Document_<"games
                     ?.quantity ?? 0, game.pack);
                 const issuePrice = rightsPriceFor(game.pack, price.value);
                 const quantity = rightsPurchase(price.value, maximum, self.cash,
-                    rightsAvailable(players, price.stockKey), issuePrice);
+                    rightsAvailable(players, price.stockKey, game.pack), issuePrice);
                 if (quantity > 0)
                 {
                     offers.push({ action: { kind: "rights-issue", insightId: card._id, stockKey: price.stockKey },

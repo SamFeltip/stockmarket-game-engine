@@ -17,7 +17,7 @@ export interface Tables {
         pack?: Pack; techStart?: number; standardPeriodCount?: number; techPeriodCount?: number;
         status: "waiting" | "playing" | "closed" | "special_insights" | "finished";
         prices: Prices; priceHistory?: { period: number; prices: Prices; steps?: { stockKey: number; values: number[]; count: number }[] }[];
-        suspended: number[]; suspensionPeriod?: number;
+        suspended: number[]; revealProgress?: { step: number; summary: boolean }; suspensionPeriod?: number;
         targetedSuspensions?: { stockKey: number; playerIds: Id<"players">[] }[];
         tradingSuspensions?: TradingSuspension<Id<"players">>[];
         rightsIssue?: {

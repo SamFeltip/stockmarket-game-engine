@@ -1,4 +1,4 @@
-import { roundMoney, sharesAvailable, sharesPerCompany, validTradeQuantity } from "../../../shared/rules";
+import { roundMoney, sharesAvailable, sharesForCash, validTradeQuantity } from "../../../shared/rules";
 import type { Action, Market } from "./index";
 
 export { roundMoney as money };
@@ -35,7 +35,7 @@ export function tradeError(market: Market, action: Action): string | undefined
         return "This stock cannot be traded";
     }
 
-    if (signed > sharesAvailable(market.players, action.stockKey))
+    if (signed > sharesAvailable(market.players, action.stockKey, market.pack))
     {
         return "Not enough shares available";
     }
@@ -88,19 +88,30 @@ export function transition(market: Market, action: Action): Market
 export function legalActions(market: Market): Action[]
 {
     const actions: Action[] = [{ kind: "pass" }];
-    const sizes = Array.from({ length: sharesPerCompany / 1000 }, (_, index) => (index + 1) * 1000);
-    for (const price of market.prices)
+    const self = market.players.find((seat) => seat.id === market.selfId);
+    if (!self)
     {
-        for (const kind of ["buy", "sell"] as const)
+        return actions;
+    }
+
+    for (const { stockKey, value } of market.prices)
+    {
+        const owned = self.holdings.find((holding) => holding.stockKey === stockKey)?.quantity;
+        if (owned === undefined || !Number.isFinite(value) || value <= 0)
         {
-            for (const quantity of sizes)
-            {
-                const action = { kind, stockKey: price.stockKey, quantity };
-                if (!tradeError(market, action))
-                {
-                    actions.push(action);
-                }
-            }
+            continue;
+        }
+
+        const available = sharesAvailable(market.players, stockKey, market.pack);
+        const buyLimit = Math.min(available, sharesForCash(self.cash, value));
+        for (let quantity = 1000; quantity <= buyLimit; quantity += 1000)
+        {
+            actions.push({ kind: "buy", stockKey, quantity });
+        }
+
+        for (let quantity = 1000; quantity <= owned; quantity += 1000)
+        {
+            actions.push({ kind: "sell", stockKey, quantity });
         }
     }
 

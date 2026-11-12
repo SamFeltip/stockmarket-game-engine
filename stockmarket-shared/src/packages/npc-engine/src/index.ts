@@ -10,6 +10,7 @@ import { felix } from "./personalities/felix";
 import { morgan, morganEstimates } from "./personalities/morgan";
 import { chooseChance } from "./chance";
 import { plan } from "./planning";
+import { franticTrade } from "./frantic";
 export { roster } from "./roster";
 
 export { emptyMemory } from "./memory";
@@ -38,6 +39,15 @@ export function decide(
     if (chance)
     {
         return finish(chance, "cards");
+    }
+
+    if (observation.pack === "frantic")
+    {
+        const trade = franticTrade(observation, estimates, profile.difficulty);
+        if (trade)
+        {
+            return finish(trade, "cards");
+        }
     }
 
     switch (profile.personality)

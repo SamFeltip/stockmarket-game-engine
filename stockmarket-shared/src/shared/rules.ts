@@ -1,11 +1,15 @@
+import type { Pack } from "./packs";
+
 export const startingCash = 60_000;
 
 export const sharesPerCompany = 200_000;
 
 export function sharesAvailable(players: readonly { holdings: readonly { stockKey: number; quantity: number }[] }[],
-    stockKey: number)
+    stockKey: number, pack?: Pack)
 {
-    return Math.max(0, sharesPerCompany - players.reduce((sum, player) => sum
+    const supply = pack === "frantic" ? 10_000_000 : sharesPerCompany;
+
+    return Math.max(0, supply - players.reduce((sum, player) => sum
       + (player.holdings.find((holding) => holding.stockKey === stockKey)?.quantity ?? 0), 0));
 }
 
@@ -62,4 +66,10 @@ export function inStockOrder<T extends { stockKey: number }>(items: readonly T[]
 
     return [...items].sort((a, b) =>
         (position.get(a.stockKey) ?? stocks.length) - (position.get(b.stockKey) ?? stocks.length));
+}
+
+// Some TV WebViews do not provide Array.prototype.at.
+export function lastItem<T>(items?: readonly T[]): T | undefined
+{
+    return items?.[items.length - 1];
 }

@@ -97,7 +97,7 @@ export async function purchase(context: MutationContext, game: Document_<"games"
     }
 
     const seats = await members(context, game._id);
-    if (quantity > rightsAvailable(seats, issue.stockKey))
+    if (quantity > rightsAvailable(seats, issue.stockKey, game.pack))
     {
         fail("There aren't enough shares available. Try fewer shares.");
     }

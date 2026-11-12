@@ -25,5 +25,5 @@ export function marketFor(
     players: readonly Document_<"players">[],
 ): Market
 {
-    return { selfId: player._id, prices: tradingPrices(game, player._id), players: publicSeats(players, game) };
+    return { pack: game.pack, selfId: player._id, prices: tradingPrices(game, player._id), players: publicSeats(players, game) };
 }

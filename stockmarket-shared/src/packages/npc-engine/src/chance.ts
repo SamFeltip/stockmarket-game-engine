@@ -26,3 +26,37 @@ export function suspensionChoice(holdings: readonly Holding[], opening: readonly
 
     return best && best.benefit > 0 ? best.stockKey : undefined;
 }
+
+/** In Frantic, protect our falling positions or deny gains to rising rivals. */
+export function targetedSuspensionChoice<Id extends string>(input: {
+    selfId: Id; players: readonly { id: Id; holdings: readonly Holding[] }[];
+    opening: readonly StockPrice[]; settled: readonly StockPrice[]; suspended: readonly number[];
+    targeted?: readonly { stockKey: number; playerIds: readonly Id[] }[];
+})
+{
+    let best: { stockKey: number; playerIds: Id[]; benefit: number } | undefined;
+    for (const price of input.opening)
+    {
+        if (input.suspended.includes(price.stockKey))
+        {
+            continue;
+        }
+
+        const change = (input.settled.find((item) => item.stockKey === price.stockKey)?.value ?? price.value) - price.value;
+        const alreadyTargeted = input.targeted?.find((item) => item.stockKey === price.stockKey)?.playerIds;
+        const targets = input.players.flatMap((player) =>
+        {
+            const quantity = player.holdings.find((holding) => holding.stockKey === price.stockKey)?.quantity ?? 0;
+            const benefit = quantity * change * (player.id === input.selfId ? -1 : 1);
+
+            return benefit > 0 && !alreadyTargeted?.includes(player.id) ? [{ id: player.id, benefit }] : [];
+        });
+        const benefit = targets.reduce((sum, target) => sum + target.benefit, 0);
+        if (benefit > (best?.benefit ?? 0))
+        {
+            best = { stockKey: price.stockKey, playerIds: targets.map((target) => target.id), benefit };
+        }
+    }
+
+    return best;
+}

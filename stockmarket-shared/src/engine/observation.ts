@@ -29,8 +29,7 @@ export async function buildNpcObservation(
     const selfIndex = players.findIndex((seat) => seat._id === self._id);
     const fullMarket = marketFor(game, self, players);
     const market = {
-        selfId: fullMarket.selfId,
-        players: fullMarket.players,
+        ...fullMarket,
         prices: fullMarket.prices.filter((price) => stocks.some((stock) => stock.key === price.stockKey)),
     };
     const actionsRemaining = Math.max(1, 3 - Math.floor(game.turn / players.length)) as 1 | 2 | 3;

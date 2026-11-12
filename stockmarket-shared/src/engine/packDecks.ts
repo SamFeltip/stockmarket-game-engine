@@ -60,7 +60,10 @@ function franticStockDeck(catalog: DeckCard[], stock: typeof stockCatalog[number
         }
     }
 
-    return [...base, ...extra];
+    const cards = [...base, ...extra];
+
+    // Increase UB losses without changing how often those cards are drawn.
+    return stock.key === 8 ? cards.map((card) => card.value < 0 ? cardWithValue(card.id, card.value * 2) : card) : cards;
 }
 
 function retailStockCards(): DeckCard[]
@@ -156,7 +159,7 @@ const decks: Record<Pack, PackDeck> = {
     frantic: {
         stockCards: franticStockCards,
         deal: (context, _game, deck, seats) => dealFranticHands(context, deck, seats),
-        catalogVersion: "frantic-downside-v3",
+        catalogVersion: "frantic-downside-v4",
         opponentDrawSize: (handSize) => handSize,
     },
     tech: {

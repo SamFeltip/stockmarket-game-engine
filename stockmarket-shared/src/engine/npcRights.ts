@@ -32,7 +32,7 @@ export async function npcRightsQuantity(context: QueryContext, game: Document_<"
     issue: NonNullable<Document_<"games">["rightsIssue"]>, player: Document_<"players">)
 {
     const price = tradingQuote(game, issue.stockKey, player._id) ?? 0;
-    const available = rightsAvailable(await members(context, game._id), issue.stockKey);
+    const available = rightsAvailable(await members(context, game._id), issue.stockKey, game.pack);
     const { action } = chooseNpcAction({ phase: "rights", price, maximum: issue.offers[issue.index].maximum,
         cash: player.cash, available, issuePrice: rightsPriceFor(game.pack, price) });
 

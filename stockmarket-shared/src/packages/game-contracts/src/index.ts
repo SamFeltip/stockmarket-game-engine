@@ -1,3 +1,5 @@
+import type { Pack } from "../../../shared/packs";
+
 export type Difficulty = "easy" | "medium" | "hard";
 
 export type PersonalityId = "frankie" | "casey" | "ada" | "felix" | "morgan";
@@ -62,6 +64,7 @@ export interface PublicPeriodSummary {
 }
 
 export interface Market {
+    readonly pack?: Pack;
     readonly selfId: string;
     readonly players: readonly PublicSeat[];
     readonly prices: readonly StockPrice[];
