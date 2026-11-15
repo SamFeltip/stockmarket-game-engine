@@ -12,7 +12,7 @@ export interface Tables {
     games: {
         code: string; hostId?: Id<"users">; spectatorHostId?: Id<"users">; tvTokenHash?: string;
         currentUserId?: Id<"users">; currentPlayerId?: Id<"players">; npcDifficulty?: NpcProfile["difficulty"];
-        rulesVersion?: number; rosterRevision?: number; catalogVersion?: string;
+        rulesVersion?: number; rosterRevision?: number; catalogVersion?: string; tradeHistoryStart?: number;
         periodCount: number; currentPeriod: number; turn: number;
         pack?: Pack; techStart?: number; standardPeriodCount?: number; techPeriodCount?: number;
         status: "waiting" | "playing" | "closed" | "special_insights" | "finished";
@@ -48,7 +48,7 @@ export interface Tables {
     periodSummaries: { gameId: Id<"games">; period: number; opening: Prices; settled: Prices };
     feed: { gameId: Id<"games">; period: number; title: string; message: string; imageRoot: string; colour: string;
         debenturePayout?: number; redemptionName?: string; cashBonus?: number; stockKey?: number; quantity?: number;
-        roleBefore?: CompanyRole; roleAfter?: CompanyRole };
+        roleBefore?: CompanyRole; roleAfter?: CompanyRole; bargainRound?: number; chartPeriod?: number };
 }
 export type Table = keyof Tables;
 export type Document_<T extends Table> = Tables[T] & { _id: Id<T>; _creationTime: number };

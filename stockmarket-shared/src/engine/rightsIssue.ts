@@ -127,7 +127,8 @@ export async function purchase(context: MutationContext, game: Document_<"games"
             actorPlayerId: player._id, action: { kind: "buy", stockKey: issue.stockKey, quantity },
             unitPrice, rightsIssueId: issue.insightId });
         await feedItem(context, game, display.name, `bought ${quantity} ${stock.name} shares in the Rights Issue`,
-            display.profileRoot, "", { stockKey: issue.stockKey, quantity, roleBefore, roleAfter });
+            display.profileRoot, "", { stockKey: issue.stockKey, quantity, roleBefore, roleAfter,
+                bargainRound: Math.floor(game.turn / seats.length) + 1 });
     }
     else
     {

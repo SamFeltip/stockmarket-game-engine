@@ -150,6 +150,11 @@ export async function applyTurn(
             quantity: action.quantity * (action.kind === "buy" ? 1 : -1), roleBefore, roleAfter });
     }
 
+    if (trade.quantity)
+    {
+        trade.bargainRound = Math.floor(game.turn / players.length) + 1;
+    }
+
     await feedItem(context, game, display.name, message, display.profileRoot, "", trade);
     await finishTurn(context, game, player, players);
 }

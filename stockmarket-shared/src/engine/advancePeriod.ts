@@ -55,6 +55,7 @@ export async function advancePeriod(context: MutationContext, game: Document_<"g
     ];
 
     await context.db.patch(game._id, { prices, priceHistory, status: finished ? "finished" : "playing", currentPeriod,
+        tradeHistoryStart: game.tradeHistoryStart ?? game.currentPeriod + 1,
         turn: 0, suspended: [], revealProgress: undefined, suspensionPeriod: undefined, targetedSuspensions: undefined,
         tradingSuspensions: tradingSuspensions.length ? tradingSuspensions : undefined,
         currentUserId: players[currentPeriod % players.length].userId,

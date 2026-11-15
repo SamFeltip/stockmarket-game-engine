@@ -48,9 +48,10 @@ export async function roundInsights(context: QueryContext, game: Document_<"game
 }
 
 export async function feedItem(context: MutationContext, game: Document_<"games">, title: string,
-    message: string, imageRoot: string, colour = "", trade: Pick<Partial<Document_<"feed">>, "stockKey" | "quantity" | "cashBonus" | "debenturePayout" | "redemptionName" | "roleBefore" | "roleAfter"> = {})
+    message: string, imageRoot: string, colour = "", trade: Pick<Partial<Document_<"feed">>, "stockKey" | "quantity" | "cashBonus" | "debenturePayout" | "redemptionName" | "roleBefore" | "roleAfter" | "bargainRound"> = {})
 {
-    await context.db.insert("feed", { gameId: game._id, period: game.currentPeriod, title, message, imageRoot, colour, ...trade });
+    await context.db.insert("feed", { gameId: game._id, period: game.currentPeriod, title, message, imageRoot, colour, ...trade,
+        ...(trade.bargainRound !== undefined && { chartPeriod: game.currentPeriod }) });
 }
 
 export function netWorth(player: Document_<"players">, game: Document_<"games">)
