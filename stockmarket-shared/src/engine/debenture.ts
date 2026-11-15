@@ -2,6 +2,7 @@ import { gameStocks } from "./packRules";
 import type { QueryContext, Document_ } from "./model";
 import { bankruptcyPeriod, debentureInHand, debentureRuleFor, isStockRedemptionCard } from "../shared/debenture";
 import { bankruptcyBuyoutPrice, chanceStockKey, type DebentureRule } from "../shared/chance-cards";
+import { tradingQuote } from "../shared/suspensions";
 
 export function debentureOffers(context: QueryContext, game: Document_<"games">, player: Document_<"players">,
     rule: DebentureRule)
@@ -35,16 +36,22 @@ async function bankruptcyOffers(context: QueryContext, game: Document_<"games">,
     const history = game.priceHistory ?? [];
     const stocks = (await gameStocks(context, game)).filter((stock) => stock.display);
 
-    return player.holdings.filter((holding) => holding.quantity > 0
-      && stocks.some((stock) => stock.key === holding.stockKey)
-      && game.prices.some((price) => price.stockKey === holding.stockKey && price.value <= 0)).map((holding) =>
+    return player.holdings.flatMap(({ stockKey, quantity }) =>
     {
-        const bankrupt = bankruptcyPeriod(holding.stockKey, history, game.currentPeriod);
-        const stock = stocks.find((item) => item.key === holding.stockKey)!;
+        const stock = stocks.find((item) => item.key === stockKey);
+        const marketBankrupt = game.prices.some((price) => price.stockKey === stockKey && price.value <= 0);
+        if (!stock || quantity <= 0 || (!marketBankrupt
+          && (fixedPrice === undefined || tradingQuote(game, stockKey, player._id) !== 0)))
+        {
+            return [];
+        }
+
+        // If only this shareholder's quote is frozen at zero, date the bankruptcy from before the rebound.
+        const bankrupt = bankruptcyPeriod(stockKey, history, marketBankrupt ? game.currentPeriod : game.currentPeriod - 1);
         const opening = history.find((snapshot) => snapshot.period === 0)?.prices
-            .find((price) => price.stockKey === holding.stockKey)?.value ?? stock.startingValue;
+            .find((price) => price.stockKey === stockKey)?.value ?? stock.startingValue;
         const unitPrice = fixedPrice ?? (Number.isFinite(opening) && opening > 0 ? opening : null);
-        const amount = unitPrice === null ? null : Math.round(holding.quantity * unitPrice * 100) / 100;
+        const amount = unitPrice === null ? null : Math.round(quantity * unitPrice * 100) / 100;
         const claimUntilPeriod = bankrupt === null ? null : bankrupt + 1;
         let unavailableReason: string | null = null;
         if (claimUntilPeriod === null)
@@ -60,8 +67,7 @@ async function bankruptcyOffers(context: QueryContext, game: Document_<"games">,
             unavailableReason = "The game opening price is unavailable.";
         }
 
-        return { stockKey: holding.stockKey, quantity: holding.quantity, amount,
-            unitPrice, claimUntilPeriod, unavailableReason };
+        return [{ stockKey, quantity, amount, unitPrice, claimUntilPeriod, unavailableReason }];
     });
 }
 
