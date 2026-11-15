@@ -1,15 +1,29 @@
-/** Resolve chance cards in the current period's opening-seat order, one physical card at a time. */
-export function pendingSuspensions<T extends { _id: string; playerId: string;
-    period?: number; chanceKind?: string; used?: boolean; resolved: boolean }>(
+type SuspensionCard = { _id: string; playerId: string;
+    period?: number; chanceKind?: string; used?: boolean; resolved: boolean };
+
+function suspensionCards<T extends SuspensionCard>(
     period: number, players: { _id: string }[], insights: T[],
 ): T[]
 {
     const order = players.map((_, index) => players[(period + index) % players.length]._id);
 
-    return insights.filter((card) => card.chanceKind === "hold" && !card.used && !card.resolved
-      && order.includes(card.playerId)
+    return insights.filter((card) => card.chanceKind === "hold" && order.includes(card.playerId)
       && (card.period === undefined || card.period === period))
         .toSorted((a, b) => order.indexOf(a.playerId) - order.indexOf(b.playerId) || a._id.localeCompare(b._id));
+}
+
+/** Resolve chance cards in the current period's opening-seat order, one physical card at a time. */
+export function pendingSuspensions<T extends SuspensionCard>(period: number, players: { _id: string }[], insights: T[])
+{
+    return suspensionCards(period, players, insights).filter((card) => !card.used && !card.resolved);
+}
+
+export function suspensionTitle(period: number, players: { _id: string }[], insights: SuspensionCard[], cardId: string)
+{
+    const cards = suspensionCards(period, players, insights);
+    const index = cards.findIndex((card) => card._id === cardId);
+
+    return cards.length > 1 && index >= 0 ? `Share Suspended (${index + 1}/${cards.length})` : "Share Suspended";
 }
 
 type Stockholder = { holdings: readonly { stockKey: number; quantity: number }[] };

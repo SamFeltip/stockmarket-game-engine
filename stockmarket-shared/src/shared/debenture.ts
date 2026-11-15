@@ -18,9 +18,14 @@ export function debentureRuleFor(card: { chanceKind?: ChanceKind; debentureRule?
 }
 
 /** A debenture can be used in the period it was dealt and the following period. */
+export function debenturePeriodsLeft(card: { period: number; used?: boolean }, currentPeriod: number)
+{
+    return card.used || card.period > currentPeriod ? 0 : Math.max(0, card.period + 2 - currentPeriod);
+}
+
 export function debentureInHand(card: { period: number; used?: boolean }, currentPeriod: number)
 {
-    return !card.used && card.period <= currentPeriod && currentPeriod < card.period + 2;
+    return debenturePeriodsLeft(card, currentPeriod) > 0;
 }
 
 interface Price { stockKey: number; value: number }
