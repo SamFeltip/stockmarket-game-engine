@@ -28,6 +28,8 @@ export interface PackRules {
     readonly rights: {
         /** Extra shares per share held when the issue opens, before rounding to a trade lot. */
         readonly sharesPerHolding: number;
+        /** Maximum the card player can buy when they hold none of the chosen shares. */
+        readonly unownedActorMaximum?: number;
         /** Percentage of the market quote. Omit for the fixed retail price. */
         readonly marketPricePercent?: number;
     };
@@ -51,7 +53,7 @@ const rulesByPack: Record<Pack, PackRules> = {
         ...standardRules,
         loanAmount: 30_000,
         targetedSuspensions: true,
-        rights: { ...standardRules.rights, sharesPerHolding: 10 },
+        rights: { ...standardRules.rights, sharesPerHolding: 10, unownedActorMaximum: 5_000 },
     },
     tech: {
         ...standardRules,

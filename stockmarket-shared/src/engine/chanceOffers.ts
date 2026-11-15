@@ -36,7 +36,7 @@ export async function chanceOffers(context: QueryContext, game: Document_<"games
             for (const price of prices)
             {
                 const maximum = rightsEntitlement(self.holdings.find((item) => item.stockKey === price.stockKey)
-                    ?.quantity ?? 0, game.pack);
+                    ?.quantity ?? 0, game.pack, true);
                 const issuePrice = rightsPriceFor(game.pack, price.value);
                 const quantity = rightsPurchase(price.value, maximum, self.cash,
                     rightsAvailable(players, price.stockKey, game.pack), issuePrice);

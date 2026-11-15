@@ -41,8 +41,9 @@ export async function activateRightsIssue(context: MutationContext, game: Docume
     const offers = rightsIssueOrder(seats, player._id).flatMap((seat) =>
     {
         const held = seat.holdings.find((holding) => holding.stockKey === command.stockKey)?.quantity ?? 0;
+        const maximum = rightsEntitlement(held, game.pack, seat._id === player._id);
 
-        return held > 0 ? [{ playerId: seat._id, held, maximum: rightsEntitlement(held, game.pack) }] : [];
+        return held > 0 || maximum > 0 ? [{ playerId: seat._id, held, maximum }] : [];
     });
     if (!stock)
     {
@@ -90,7 +91,7 @@ export async function purchase(context: MutationContext, game: Document_<"games"
     const player = (await context.db.get(offer.playerId)) ?? fail("Player not found");
     const marketPrice = game.prices.find((price) => price.stockKey === issue.stockKey)?.value ?? 0;
     const unitPrice = rightsPriceFor(game.pack, marketPrice);
-    const reason = rightsPurchaseError(quantity, offer.maximum, player.cash, game.pack, unitPrice);
+    const reason = rightsPurchaseError(quantity, offer.maximum, player.cash, game.pack, unitPrice, offer.held);
     if (reason)
     {
         fail(reason);
@@ -111,8 +112,10 @@ export async function purchase(context: MutationContext, game: Document_<"games"
         const qualification = roleQualification(player, issue.stockKey, held + quantity,
             game.currentPeriod * 100 + game.turn + (issue.index + 1) / 100, roleBefore);
 
-        const holdings = player.holdings.map((holding) => holding.stockKey === issue.stockKey
-            ? { ...holding, quantity: held + quantity } : holding);
+        const holdings = player.holdings.some((holding) => holding.stockKey === issue.stockKey)
+            ? player.holdings.map((holding) => holding.stockKey === issue.stockKey
+                ? { ...holding, quantity: held + quantity } : holding)
+            : [...player.holdings, { stockKey: issue.stockKey, quantity }];
         const updated = { ...player, holdings, ...qualification,
             cash: roundMoney(player.cash - roundMoney(quantity * unitPrice)) };
         const roleAfter = companyRoles(seats.map((seat) => seat._id === player._id ? updated : seat), issue.stockKey)

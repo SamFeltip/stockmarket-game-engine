@@ -12,8 +12,12 @@ export function rightsPriceFor(pack: Pack | undefined, marketPrice: number)
         : Math.max(0.01, Math.round(marketPrice * marketPricePercent) / 100);
 }
 
-export const rightsEntitlement = (held: number, pack?: Pack) =>
-    floorTradeQuantity(held * rulesForPack(pack).rights.sharesPerHolding);
+export function rightsEntitlement(held: number, pack?: Pack, opensIssue = false)
+{
+    const { sharesPerHolding, unownedActorMaximum } = rulesForPack(pack).rights;
+
+    return held === 0 && opensIssue ? unownedActorMaximum ?? 0 : floorTradeQuantity(held * sharesPerHolding);
+}
 
 export function maxRightsPurchase(maximum: number, cash: number, available: number, price: number)
 {
@@ -38,7 +42,8 @@ export function rightsIssueOrder<T extends { _id: string }>(players: T[], actorI
     return [...players.slice(start), ...players.slice(0, start)];
 }
 
-export function rightsPurchaseError(quantity: number, maximum: number, cash: number, pack?: Pack, price = rightsIssuePrice)
+export function rightsPurchaseError(quantity: number, maximum: number, cash: number, pack?: Pack, price = rightsIssuePrice,
+    held?: number)
 {
     if (!Number.isSafeInteger(quantity) || quantity < 0)
     {
@@ -47,7 +52,11 @@ export function rightsPurchaseError(quantity: number, maximum: number, cash: num
 
     if (quantity > maximum)
     {
-        const { sharesPerHolding } = rulesForPack(pack).rights;
+        const { sharesPerHolding, unownedActorMaximum } = rulesForPack(pack).rights;
+        if (held === 0 && unownedActorMaximum)
+        {
+            return `You may only buy up to ${maximum.toLocaleString("en-GB")} shares when you own none.`;
+        }
 
         return sharesPerHolding === 0.5
             ? "You may only buy one extra share for every two you owned when the Rights Issue started."
