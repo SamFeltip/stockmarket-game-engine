@@ -4,15 +4,15 @@ import { createHash } from "node:crypto";
 import { GameEnvironment, npcAction, emptyMemory, roster } from "../src/index";
 import type { NpcMemory } from "../src/index";
 
-// Baselines include lot-rounded Rights Issues and two-period Debenture expiry. Hash every private decision view,
-// action, returned memory and reason, plus final rewards. Normalize database IDs relative to the game so setup inserts do not affect the comparison.
+// Hash the contents of every private decision view, action, returned memory and reason, plus final rewards.
+// Normalize database IDs and object key order so setup inserts and object construction order do not affect the comparison.
 const baselines = [
     { seed: 42, players: 4, periods: 6, steps: 85,
-        hash: "0ff07afdf310f9d7daee5612d92bf4c3b8e99fd331066d494a094cd1a57d3ede" },
+        hash: "624f7c362cf225d6789e47359d25f15711ec427de54edd910ff6a9f07e328d7c" },
     { seed: 718, players: 6, periods: 10, steps: 215,
-        hash: "ef60e074e1d05e7b717370d4c8409d396ca85b5c209067322efb2236180fc461" },
+        hash: "782e646f712056c56a0d42cdb996cea7c5ab588003cc560deda8b5cb46b376db" },
     { seed: 33, players: 5, periods: 7, steps: 121,
-        hash: "bba44ad8fcc28afaa3d8341ccba4ea55e77407b52973afab6edba8435ded0ee8" },
+        hash: "bf1be7aaabd61f55b7325e7879985c4d108b9f93b4d36bae35ab6e21bdb2bbf5" },
 ];
 
 for (const baseline of baselines) {
@@ -24,7 +24,16 @@ for (const baseline of baselines) {
         const gameSequence = Number(env.snapshot().gameId.split(":")[1]);
         const relativeId = (value: string) => value.replace(/([a-zA-Z]+):(\d{8})/g,
             (_id, table: string, sequence: string) => `${table}:${Number(sequence) - gameSequence}`);
-        const replaceId = (_key: string, value: unknown) => typeof value === "string" ? relativeId(value) : value;
+        const serialize = (record: unknown) => JSON.stringify(record, (_key, value: unknown) => {
+            if (typeof value === "string") {
+                return relativeId(value);
+            }
+            if (value && typeof value === "object" && !Array.isArray(value)) {
+                const fields = value as Record<string, unknown>;
+                return Object.fromEntries(Object.keys(fields).sort().map((key) => [key, fields[key]]));
+            }
+            return value;
+        });
         let result = await env.current();
         let steps = 0;
         while (result.decision) {
@@ -36,13 +45,13 @@ for (const baseline of baselines) {
             if (selected.action.kind === "rights-response") {
                 assert.equal(selected.action.quantity % 1000, 0);
             }
-            hash.update(JSON.stringify({ decision, selected }, replaceId));
+            hash.update(serialize({ decision, selected }));
             result = await env.step(selected.action, decision.token);
             memories.set(decision.playerId, selected.nextMemory);
             steps++;
         }
         const rewards = Object.fromEntries(Object.entries(result.rewards).map(([id, reward]) => [relativeId(id), reward]));
-        hash.update(JSON.stringify({ ...result, rewards }));
+        hash.update(serialize({ ...result, rewards }));
         assert.equal(steps, baseline.steps);
         assert.equal(hash.digest("hex"), baseline.hash);
     });
