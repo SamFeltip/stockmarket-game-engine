@@ -44,6 +44,12 @@ function franticStockDeck(catalog: DeckCard[], stock: typeof stockCatalog[number
         return negative ? [cardWithValue(id, negative.value * 2)] : [];
     });
     const baseDownside = base.reduce((sum, card) => sum - Math.min(0, card.value), 0);
+    const positives = stock.key === 7 || stock.key === 12
+        ? base.filter((card) => card.value > 0).sort((a, b) => a.value - b.value) : [];
+    const extraGains = Math.round(positives.length * 0.2);
+    const middle = Math.floor((positives.length - extraGains) / 2);
+    const boosted = positives.slice(middle, middle + extraGains).map(({ value }, index) =>
+        cardWithValue(`frantic:upside:${stock.key}:${index}`, value));
     let remaining = (franticDownside[stock.key] ?? 0) - baseDownside;
     const sizes = [...new Set(negatives.map((card) => -2 * card.value))].sort((a, b) => a - b);
     const extra: DeckCard[] = [];
@@ -63,7 +69,7 @@ function franticStockDeck(catalog: DeckCard[], stock: typeof stockCatalog[number
     // UB's previous Frantic losses already had an additional 2× multiplier.
     const lossMultiplier = stock.key === 8 ? 2 * 3 : 2;
 
-    return [...base, ...extra].map((card) =>
+    return [...base, ...boosted, ...extra].map((card) =>
         card.value < 0 ? cardWithValue(card.id, card.value * lossMultiplier) : card);
 }
 
@@ -160,7 +166,7 @@ const decks: Record<Pack, PackDeck> = {
     frantic: {
         stockCards: franticStockCards,
         deal: (context, _game, deck, seats) => dealFranticHands(context, deck, seats),
-        catalogVersion: "frantic-downside-v5",
+        catalogVersion: "frantic-balance-v6",
         opponentDrawSize: (handSize) => handSize,
     },
     tech: {
