@@ -22,22 +22,19 @@ export async function retainedDebentures(context: QueryContext, game: Document_<
     return previous.filter((card) => isStockRedemptionCard(card.chanceKind) && debentureInHand(card, game.currentPeriod));
 }
 
-export async function privateForecasts(context: QueryContext, game: Document_<"games">, playerId: Id<"players">)
+export async function privateForecasts(context: QueryContext, game: Document_<"games">, playerId: Id<"players">,
+    currentHand?: Document_<"playerInsights">[])
 {
     if (game.pack !== "tech")
     {
         return [];
     }
 
-    const hand = await playerPeriodInsights(context, playerId, forecastDealPeriod(game));
+    const period = forecastDealPeriod(game);
+    const hand = period === game.currentPeriod && currentHand !== undefined
+        ? currentHand : await playerPeriodInsights(context, playerId, period);
 
     return hand.filter((card) => card.forecast);
-}
-
-export function npcPeriodInsights(context: QueryContext, game: Document_<"games">, playerId: Id<"players">)
-{
-    return game.pack === "tech" ? privateForecasts(context, game, playerId)
-        : playerPeriodInsights(context, playerId, game.currentPeriod);
 }
 
 export async function savedDeck(context: QueryContext, gameId: Id<"games">)

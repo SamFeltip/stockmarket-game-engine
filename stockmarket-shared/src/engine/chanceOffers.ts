@@ -8,10 +8,11 @@ import { debentureClaims } from "./debenture";
 import { playerPeriodInsights, retainedDebentures } from "./dealing";
 
 export async function chanceOffers(context: QueryContext, game: Document_<"games">,
-    self: Document_<"players">, players: Document_<"players">[], prices: readonly StockPrice[]): Promise<ChanceOffer[]>
+    self: Document_<"players">, players: Document_<"players">[], prices: readonly StockPrice[],
+    currentHand?: Document_<"playerInsights">[]): Promise<ChanceOffer[]>
 {
     const cards = (await retainedDebentures(context, game, self._id))
-        .concat(await playerPeriodInsights(context, self._id, game.currentPeriod));
+        .concat(currentHand ?? await playerPeriodInsights(context, self._id, game.currentPeriod));
     const claims = await debentureClaims(context, game, self, cards);
     const offers: ChanceOffer[] = [];
     for (const card of cards.filter((item) => item.gameId === game._id && item.stockKey === chanceStockKey

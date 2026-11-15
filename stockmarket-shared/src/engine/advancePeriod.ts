@@ -32,19 +32,16 @@ export async function advancePeriod(context: MutationContext, game: Document_<"g
     const effectiveInsights = settlementInsights(game, insights, players, stocks);
     const prices = roundPrices(game.prices, effectiveInsights, stocks, game.suspended);
     const tradingSuspensions = nextTradingSuspensions(game, players);
-    for (const seat of players)
+    const settledPlayers = players.map((seat) => ({ ...seat, cash: roundCash(seat, insights, stocks) }));
+    const rankings = publicSeats(settledPlayers, { prices, tradingSuspensions });
+    for (const seat of settledPlayers)
     {
-        await context.db.patch(seat._id, { cash: roundCash(seat, insights, stocks) });
+        await context.db.patch(seat._id, { cash: seat.cash,
+            periodStartRanking: rankings.find((item) => item.id === seat._id)!.ranking });
     }
 
     await context.db.insert("periodSummaries", { gameId: game._id, period: game.currentPeriod,
         opening: game.prices, settled: prices });
-    const rankings = publicSeats(await members(context, game._id), { prices, tradingSuspensions });
-    for (const seat of players)
-    {
-        await context.db.patch(seat._id, { periodStartRanking: rankings.find((item) =>
-            item.id === seat._id)!.ranking });
-    }
 
     const finished = game.currentPeriod >= game.periodCount;
     const currentPeriod = finished ? game.currentPeriod : game.currentPeriod + 1;

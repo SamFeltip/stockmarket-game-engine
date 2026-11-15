@@ -3,7 +3,7 @@ import type { NpcObservation } from "../packages/game-contracts/src";
 import type { QueryContext, Document_ } from "./model";
 import { legalActions } from "../packages/game-contracts/src";
 import { members } from "./library";
-import { npcPeriodInsights, savedDeck } from "./dealing";
+import { playerPeriodInsights, privateForecasts, savedDeck } from "./dealing";
 import { marketFor } from "./legalActions";
 import { chanceOffers } from "./chanceOffers";
 import { legacyTechRounds } from "../shared/packs";
@@ -15,7 +15,8 @@ export async function buildNpcObservation(
 ): Promise<NpcObservation>
 {
     const players = await members(context, game._id);
-    const hand = await npcPeriodInsights(context, game, self._id);
+    const currentHand = await playerPeriodInsights(context, self._id, game.currentPeriod);
+    const hand = game.pack === "tech" ? await privateForecasts(context, game, self._id, currentHand) : currentHand;
     const catalog = await savedDeck(context, game._id);
     const stocks = (await gameStocks(context, game)).filter((stock) => stock.display);
     const events = await context.db
@@ -48,7 +49,7 @@ export async function buildNpcObservation(
     return {
         ...market,
         ...(opponentDrawSize !== undefined && { opponentDrawSize }),
-        chanceOffers: await chanceOffers(context, game, self, players, market.prices),
+        chanceOffers: await chanceOffers(context, game, self, players, market.prices, currentHand),
         period: game.currentPeriod,
         finalPeriod: game.periodCount,
         turn: game.turn,
