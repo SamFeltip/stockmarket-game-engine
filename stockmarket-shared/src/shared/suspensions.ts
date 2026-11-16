@@ -9,7 +9,7 @@ function suspensionCards<T extends SuspensionCard>(
 
     return insights.filter((card) => card.chanceKind === "hold" && order.includes(card.playerId)
       && (card.period === undefined || card.period === period))
-        .toSorted((a, b) => order.indexOf(a.playerId) - order.indexOf(b.playerId) || a._id.localeCompare(b._id));
+        .sort((a, b) => order.indexOf(a.playerId) - order.indexOf(b.playerId) || a._id.localeCompare(b._id));
 }
 
 /** Resolve chance cards in the current period's opening-seat order, one physical card at a time. */

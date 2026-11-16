@@ -36,7 +36,7 @@ export function bankruptcyPeriod(stockKey: number, history: Snapshot[], currentP
 {
     let solvent = false;
     let bankrupt: number | null = null;
-    const snapshots = history.filter((item) => item.period <= currentPeriod).toSorted((a, b) => a.period - b.period);
+    const snapshots = history.filter((item) => item.period <= currentPeriod).sort((a, b) => a.period - b.period);
     for (const snapshot of snapshots)
     {
         const price = snapshot.prices.find((item) => item.stockKey === stockKey)?.value;

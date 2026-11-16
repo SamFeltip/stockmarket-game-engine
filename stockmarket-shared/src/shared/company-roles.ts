@@ -13,12 +13,12 @@ export function companyRoles(players: Seat[], stockKey: number)
 {
     const quantity = (player: Seat) => player.holdings.find((holding) => holding.stockKey === stockKey)?.quantity ?? 0;
     // Stored qualification order survives periods. Legacy holdings use stable seat order.
-    const chairman = players.filter((player) => quantity(player) >= companyRoleThresholds.chairman).toSorted((a, b) =>
+    const chairman = players.filter((player) => quantity(player) >= companyRoleThresholds.chairman).sort((a, b) =>
         (a.chairmanSince?.find((item) => item.stockKey === stockKey)?.order ?? -1)
         - (b.chairmanSince?.find((item) => item.stockKey === stockKey)?.order ?? -1))[0];
 
     const director = players.filter((player) => player._id !== chairman?._id
-      && quantity(player) >= companyRoleThresholds.director).toSorted((a, b) =>
+      && quantity(player) >= companyRoleThresholds.director).sort((a, b) =>
         (a.directorSince?.find((item) => item.stockKey === stockKey)?.order ?? -1)
         - (b.directorSince?.find((item) => item.stockKey === stockKey)?.order ?? -1))[0];
 
@@ -72,7 +72,7 @@ export function withRoleBonuses<T extends Card>(
         const chairman = roles.find((item) => item.role === "chairman");
         const eligible = insights.filter((card) => card.stockKey === stock.key && card.value < 0
           && (chairman || roles.some((item) => item.playerId === card.playerId)));
-        const worst = eligible.toSorted((a, b) => a.value - b.value || a._id.localeCompare(b._id))[0];
+        const worst = eligible.sort((a, b) => a.value - b.value || a._id.localeCompare(b._id))[0];
         const owner = chairman ?? roles.find((item) => item.playerId === worst?.playerId);
         if (worst && owner)
         {
